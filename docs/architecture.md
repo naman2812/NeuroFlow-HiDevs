@@ -64,6 +64,21 @@ The Generation Subsystem takes the retrieved context window and the user query t
 4. **Streaming**: The response is streamed token-by-token back to the client via SSE.
 5. **Logging**: The complete Input/Output pair, along with metadata, is logged to PostgreSQL for evaluation.
 
+```mermaid
+graph TD
+    A[User Query] --> B[Prompt Assembly]
+    C[Ranked Context Window] --> B
+    B --> D[Model Router]
+    D --> E[Tier 1: Fast/Cheap LLM]
+    D --> F[Tier 2: Fine-Tuned LLM]
+    D --> G[Tier 3: Heavy Reasoning LLM]
+    E --> H[Generation]
+    F --> H
+    G --> H
+    H --> I[SSE Stream to Client]
+    H --> J[(PostgreSQL - Evaluation Log)]
+```
+
 ## 4. Evaluation Subsystem
 
 The Evaluation Subsystem asynchronously scores every generation using an LLM-as-a-judge approach (see ADR-003).
@@ -78,6 +93,21 @@ The Evaluation Subsystem asynchronously scores every generation using an LLM-as-
 3. **Storage**: Stores scores in PostgreSQL.
 4. **Aggregation**: Computes rolling aggregates to monitor system health over time.
 
+```mermaid
+graph TD
+    A[Generation Completes] --> B[Async Evaluation Trigger]
+    B --> C[LLM-as-a-Judge]
+    C --> D[Score: Faithfulness]
+    C --> E[Score: Answer Relevance]
+    C --> F[Score: Context Precision]
+    C --> G[Score: Context Recall]
+    D --> H[(PostgreSQL)]
+    E --> H
+    F --> H
+    G --> H
+    H --> I[Rolling Aggregates Computation]
+```
+
 ## 5. Fine-Tuning Subsystem
 
 The Fine-Tuning Subsystem continuously improves the system by training on high-quality outputs.
@@ -88,3 +118,14 @@ The Fine-Tuning Subsystem continuously improves the system by training on high-q
 3. **Job Submission**: Submits jobs to the fine-tuning service.
 4. **Tracking**: Logs experiments, hyper-parameters, and metrics in MLflow.
 5. **Deployment**: Updates the Model Router to direct similar queries to the fine-tuned model if it outperforms the base model.
+
+```mermaid
+graph TD
+    A[(PostgreSQL - Evaluation Log)] --> B{Filter: Faithfulness > 0.8 \n AND User Rating >= 4}
+    B -- Yes --> C[Extract Prompt/Completion Pairs]
+    C --> D[Format as JSONL]
+    D --> E[Submit Fine-Tuning Job]
+    E --> F[MLflow - Track Experiment]
+    F --> G[Deploy Fine-Tuned Model]
+    G --> H[Update Model Router]
+```
