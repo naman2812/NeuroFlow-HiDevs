@@ -33,7 +33,7 @@ services:
 
   worker:
     build: ../backend
-    command: python -m backend.worker
+    command: python -m worker
     depends_on: [postgres, redis]
     env_file: ../.env
 
