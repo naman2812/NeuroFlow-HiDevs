@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+asyncpg
+redis
+httpx
+pydantic-settings
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+prometheus-client
