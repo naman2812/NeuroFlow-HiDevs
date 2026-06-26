@@ -26,16 +26,24 @@ services:
     depends_on: [postgres]
 
   api:
-    build: ../backend
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     ports: ["8000:8000"]
     depends_on: [postgres, redis, mlflow]
     env_file: ../.env
+    volumes:
+      - uploads_data:/app/uploads
 
   worker:
-    build: ../backend
-    command: python -m worker
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    command: arq backend.worker.WorkerSettings
     depends_on: [postgres, redis]
     env_file: ../.env
+    volumes:
+      - uploads_data:/app/uploads
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -43,3 +51,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

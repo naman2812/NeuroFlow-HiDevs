@@ -3,7 +3,7 @@ import asyncpg
 from arq.connections import RedisSettings
 from backend.config import settings
 from backend.providers.client import NeuroFlowClient
-from backend.pipelines.ingestion.pipeline import process_document_pipeline
+from pipelines.ingestion.pipeline import process_document_pipeline
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
