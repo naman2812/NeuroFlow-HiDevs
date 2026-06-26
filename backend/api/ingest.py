@@ -39,7 +39,7 @@ async def ingest_document(
     
     if file:
         ext = file.filename.split('.')[-1].lower()
-        if ext in ["pdf", "docx", "csv"]:
+        if ext in ["pdf", "docx", "csv", "pptx"]:
             source_type = ext
         elif ext in ["jpeg", "jpg", "png", "webp"]:
             source_type = "image"

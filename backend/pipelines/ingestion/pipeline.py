@@ -3,7 +3,7 @@ import logging
 import asyncpg
 from typing import List
 from opentelemetry import trace
-from .extractors import extract_pdf, extract_docx, extract_image, extract_csv, extract_url
+from .extractors import extract_pdf, extract_docx, extract_image, extract_csv, extract_url, extract_pptx
 from .extractors import ExtractedPage
 from .chunker import Chunker
 from backend.providers.client import NeuroFlowClient
@@ -34,6 +34,8 @@ async def process_document_pipeline(
                 pages = extract_csv(file_path)
             elif source_type == "url":
                 pages = await extract_url(file_path)  # file_path is actually the URL
+            elif source_type == "pptx":
+                pages = await extract_pptx(file_path, client)
             else:
                 with open(file_path, "r", encoding="utf-8") as f:
                     pages = [ExtractedPage(page_number=1, content=f.read(), content_type="text", metadata={})]
