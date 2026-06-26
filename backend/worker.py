@@ -16,7 +16,7 @@ async def startup(ctx):
     provider = TracerProvider(resource=resource)
     
     # In local testing we might point to localhost, but jaeger is usually available via docker network
-    jaeger_endpoint = "http://jaeger:4317" if "jaeger" in settings.redis_host else "http://localhost:4317"
+    jaeger_endpoint = "http://jaeger:4317" if settings.postgres_host == "postgres" else "http://localhost:4317"
     try:
         exporter = OTLPSpanExporter(endpoint=jaeger_endpoint, insecure=True)
         provider.add_span_processor(BatchSpanProcessor(exporter))

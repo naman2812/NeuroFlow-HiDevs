@@ -11,8 +11,21 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from backend.config import settings
+
 # Setup tracing
-trace.set_tracer_provider(TracerProvider())
+resource = Resource.create({"service.name": "neuroflow-api"})
+provider = TracerProvider(resource=resource)
+jaeger_endpoint = "http://jaeger:4317" if settings.postgres_host == "postgres" else "http://localhost:4317"
+try:
+    exporter = OTLPSpanExporter(endpoint=jaeger_endpoint, insecure=True)
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+except Exception:
+    pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
