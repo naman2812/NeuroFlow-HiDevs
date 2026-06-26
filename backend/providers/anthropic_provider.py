@@ -14,7 +14,8 @@ ANTHROPIC_PRICING = {
 class AnthropicProvider(BaseLLMProvider):
     def __init__(self, model_name: str):
         super().__init__(model_name)
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        api_key = settings.anthropic_api_key or "mock"
+        self.client = AsyncAnthropic(api_key=api_key)
         
         pricing = ANTHROPIC_PRICING.get(model_name, ANTHROPIC_PRICING["claude-3-5-sonnet-20240620"])
         self._cost_input = pricing["input"] / 1_000_000
@@ -41,7 +42,33 @@ class AnthropicProvider(BaseLLMProvider):
                 # Anthropic API takes a single top-level `system` parameter
                 system_text += str(msg.content) + "\n"
             else:
-                api_messages.append({"role": msg.role, "content": msg.content})
+                if isinstance(msg.content, list):
+                    normalized_content = []
+                    for block in msg.content:
+                        if isinstance(block, dict) and block.get("type") == "image_url":
+                            # translate OpenAI image_url to Anthropic image
+                            url = block["image_url"]["url"]
+                            if url.startswith("data:"):
+                                mime_type_b64 = url[5:].split(";base64,")
+                                if len(mime_type_b64) == 2:
+                                    mime_type, b64_data = mime_type_b64
+                                    normalized_content.append({
+                                        "type": "image",
+                                        "source": {
+                                            "type": "base64",
+                                            "media_type": mime_type,
+                                            "data": b64_data
+                                        }
+                                    })
+                                else:
+                                    normalized_content.append(block) # Fallback
+                            else:
+                                normalized_content.append(block) # Cannot handle raw URLs easily in Anthropic without downloading
+                        else:
+                            normalized_content.append(block)
+                    api_messages.append({"role": msg.role, "content": normalized_content})
+                else:
+                    api_messages.append({"role": msg.role, "content": msg.content})
         
         return system_text.strip(), api_messages
 
