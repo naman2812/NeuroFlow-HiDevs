@@ -15,7 +15,8 @@ OPENAI_PRICING = {
 class OpenAIProvider(BaseLLMProvider):
     def __init__(self, model_name: str):
         super().__init__(model_name)
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+        api_key = settings.openai_api_key or "mock"
+        self.client = AsyncOpenAI(api_key=api_key)
         
         pricing = OPENAI_PRICING.get(model_name, OPENAI_PRICING["gpt-4o-mini"])
         self._cost_input = pricing["input"] / 1_000_000
@@ -105,6 +106,10 @@ class OpenAIProvider(BaseLLMProvider):
                 yield chunk.choices[0].delta.content
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        # Mock for testing
+        if not settings.openai_api_key or settings.openai_api_key == "mock":
+            return [[0.1] * 1536 for _ in texts]
+            
         # text-embedding-3-small by default with batch size of 100
         model = "text-embedding-3-small"
         batch_size = 100

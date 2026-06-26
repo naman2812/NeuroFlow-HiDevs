@@ -12,3 +12,13 @@ python-dotenv
 openai
 anthropic
 tenacity
+arq
+pypdfium2
+pytesseract
+pdfplumber
+python-docx
+pandas
+trafilatura
+tiktoken
+python-multipart
+Pillow

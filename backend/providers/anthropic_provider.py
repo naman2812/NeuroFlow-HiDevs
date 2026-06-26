@@ -14,7 +14,8 @@ ANTHROPIC_PRICING = {
 class AnthropicProvider(BaseLLMProvider):
     def __init__(self, model_name: str):
         super().__init__(model_name)
-        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        api_key = settings.anthropic_api_key or "mock"
+        self.client = AsyncAnthropic(api_key=api_key)
         
         pricing = ANTHROPIC_PRICING.get(model_name, ANTHROPIC_PRICING["claude-3-5-sonnet-20240620"])
         self._cost_input = pricing["input"] / 1_000_000
