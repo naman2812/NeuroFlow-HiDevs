@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     mlflow_uri: str = Field(default="http://mlflow:5000", description="URI for the MLflow tracking server")
 
+    openai_api_key: str | None = Field(default=None, description="OpenAI API Key")
+    anthropic_api_key: str | None = Field(default=None, description="Anthropic API Key")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
