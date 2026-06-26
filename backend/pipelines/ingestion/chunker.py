@@ -22,14 +22,23 @@ class Chunker:
         if not pages:
             return []
             
-        # Determine strategy
-        has_headings = any(p.metadata.get("level") for p in pages)
-        is_table = all(p.content_type == "table" for p in pages)
-        is_large_pdf = source_type == "pdf" and len(pages) > 50
+        chunks = []
+        table_pages = [p for p in pages if p.content_type == "table"]
+        text_pages = [p for p in pages if p.content_type != "table"]
+        
+        # 1. Process tables (always fixed_size, split by rows)
+        if table_pages:
+            chunks.extend(self._chunk_fixed_size(table_pages, is_table=True))
+            
+        if not text_pages:
+            self._renumber_chunks(chunks)
+            return chunks
 
-        if is_table:
-            strategy = "fixed_size"
-        elif source_type == "docx" and has_headings:
+        # 2. Determine strategy for text pages
+        has_headings = any(p.metadata.get("level") for p in text_pages)
+        is_large_pdf = source_type == "pdf" and len(text_pages) > 50
+
+        if source_type in ["docx", "pdf"] and has_headings:
             strategy = "hierarchical"
         elif is_large_pdf:
             strategy = "semantic"
@@ -37,26 +46,34 @@ class Chunker:
             strategy = "fixed_size"
 
         if strategy == "fixed_size":
-            return self._chunk_fixed_size(pages)
+            chunks.extend(self._chunk_fixed_size(text_pages))
         elif strategy == "hierarchical":
-            return self._chunk_hierarchical(pages)
+            chunks.extend(self._chunk_hierarchical(text_pages))
         elif strategy == "semantic":
-            return await self._chunk_semantic(pages)
-        else:
-            return self._chunk_fixed_size(pages)
+            chunks.extend(await self._chunk_semantic(text_pages))
+            
+        self._renumber_chunks(chunks)
+        return chunks
+        
+    def _renumber_chunks(self, chunks: List[Chunk]):
+        for i, c in enumerate(chunks):
+            c.chunk_index = i
 
-    def _split_into_sentences(self, text: str) -> List[str]:
+    def _split_into_sentences(self, text: str, is_table: bool = False) -> List[str]:
+        if is_table:
+            # Split tables by row to avoid breaking markdown formatting
+            return [line.strip() for line in text.split('\n') if line.strip()]
         sentences = re.split(r'(?<=[.!?])\s+', text)
         return [s.strip() for s in sentences if s.strip()]
 
-    def _chunk_fixed_size(self, pages: List[ExtractedPage]) -> List[Chunk]:
+    def _chunk_fixed_size(self, pages: List[ExtractedPage], is_table: bool = False) -> List[Chunk]:
         chunks = []
         chunk_idx = 0
         target_tokens = 512
         overlap_tokens = 64
         
         full_text = "\n\n".join(p.content for p in pages)
-        sentences = self._split_into_sentences(full_text)
+        sentences = self._split_into_sentences(full_text, is_table)
         
         current_chunk_sentences = []
         current_tokens = 0

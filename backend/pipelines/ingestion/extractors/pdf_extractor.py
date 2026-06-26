@@ -36,7 +36,22 @@ def extract_pdf(file_path: str) -> List[ExtractedPage]:
     # 2. Extract text with pypdfium2
     try:
         pdf = pdfium.PdfDocument(file_path)
+        
+        # Extract bookmarks/TOC for chapters
+        page_to_chapter = {}
+        try:
+            for item in pdf.get_toc():
+                page_to_chapter[item.page_index + 1] = item.title
+        except Exception:
+            pass
+            
+        current_chapter = "Document Start"
+
         for i in range(len(pdf)):
+            page_num = i + 1
+            if page_num in page_to_chapter:
+                current_chapter = page_to_chapter[page_num]
+                
             page = pdf[i]
             text_page = page.get_textpage()
             text = text_page.get_text_bounded()
@@ -54,14 +69,14 @@ def extract_pdf(file_path: str) -> List[ExtractedPage]:
                     ocr_text = pytesseract.image_to_string(pil_image, config="--psm 6")
                     content = ocr_text.strip()
                 except Exception as ocr_err:
-                    print(f"OCR failed for page {i+1}: {ocr_err}")
+                    print(f"OCR failed for page {page_num}: {ocr_err}")
                     
             if content:
                 pages.append(ExtractedPage(
-                    page_number=i + 1,
+                    page_number=page_num,
                     content=content,
                     content_type="text",
-                    metadata={"ocr_used": ocr_used}
+                    metadata={"ocr_used": ocr_used, "level": "h1", "section": current_chapter}
                 ))
     except Exception as e:
         print(f"Error reading PDF with pypdfium2: {e}")
