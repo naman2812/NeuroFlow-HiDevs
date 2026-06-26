@@ -64,7 +64,9 @@ class Chunker:
         for sentence in sentences:
             tokens = len(self.encoder.encode(sentence))
             
-            if current_tokens + tokens > target_tokens and current_chunk_sentences:
+            # Check if adding this sentence exceeds target + 10%
+            # Or if we are already within 10% of the target (>= 90%)
+            if current_chunk_sentences and (current_tokens + tokens > target_tokens * 1.1 or current_tokens >= target_tokens * 0.9):
                 chunk_text = " ".join(current_chunk_sentences)
                 chunks.append(Chunk(
                     content=chunk_text,

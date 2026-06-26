@@ -62,10 +62,15 @@ async def process_document_pipeline(
                             document_id, chunk.content, json.dumps(emb), chunk.chunk_index, chunk.token_count, json.dumps(chunk.metadata)
                         )
                         
+                    # Aggregate metadata
+                    doc_metadata = {}
+                    for p in pages:
+                        doc_metadata.update(p.metadata)
+                        
                     # Update document status
                     await conn.execute(
-                        "UPDATE documents SET status = 'complete', chunk_count = $1 WHERE id = $2",
-                        len(chunks), document_id
+                        "UPDATE documents SET status = 'complete', chunk_count = $1, metadata = $2 WHERE id = $3",
+                        len(chunks), json.dumps(doc_metadata), document_id
                     )
                     
             logger.info(json.dumps({

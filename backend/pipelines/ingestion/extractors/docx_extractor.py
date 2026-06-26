@@ -48,6 +48,19 @@ def extract_docx(file_path: str) -> List[ExtractedPage]:
             current_content = []
             page_counter += 1
 
+    # Extract headers
+    for section in doc.sections:
+        if section.header and not section.header.is_linked_to_previous:
+            for p in section.header.paragraphs:
+                if p.text.strip():
+                    current_content.append(p.text.strip())
+                    
+    flush() # Flush headers as a separate block
+    
+    # Reset for body
+    current_heading = "Document Start"
+    current_level = "h1"
+
     for block in iter_block_items(doc):
         if isinstance(block, Paragraph):
             style_name = block.style.name if block.style else ""
