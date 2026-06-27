@@ -64,29 +64,41 @@ class Retriever:
         return sorted_results
         
     async def _sparse_retrieval(self, processed_query: ProcessedQuery, k: int) -> List[RetrievalResult]:
+        queries = [processed_query.original_query] + processed_query.expanded_queries
+        results_list = []
+        
         async with self.db_pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT id, document_id, content, metadata,
-                       ts_rank_cd(to_tsvector('english', content), plainto_tsquery('english', $1)) AS score
-                FROM chunks
-                WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $1)
-                ORDER BY score DESC
-                LIMIT $2
-                """,
-                processed_query.original_query, k
-            )
-            
-            return [
-                RetrievalResult(
-                    chunk_id=str(row['id']),
-                    document_id=str(row['document_id']),
-                    content=row['content'],
-                    metadata=json.loads(row['metadata']) if isinstance(row['metadata'], str) else row['metadata'],
-                    score=float(row['score'])
+            for q in queries:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, document_id, content, metadata,
+                           ts_rank_cd(to_tsvector('english', content), plainto_tsquery('english', $1)) AS score
+                    FROM chunks
+                    WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $1)
+                    ORDER BY score DESC
+                    LIMIT $2
+                    """,
+                    q, k
                 )
-                for row in rows
-            ]
+                
+                for row in rows:
+                    results_list.append(
+                        RetrievalResult(
+                            chunk_id=str(row['id']),
+                            document_id=str(row['document_id']),
+                            content=row['content'],
+                            metadata=json.loads(row['metadata']) if isinstance(row['metadata'], str) else row['metadata'],
+                            score=float(row['score'])
+                        )
+                    )
+                    
+        unique_results = {}
+        for r in results_list:
+            if r.chunk_id not in unique_results or r.score > unique_results[r.chunk_id].score:
+                unique_results[r.chunk_id] = r
+                
+        sorted_results = sorted(unique_results.values(), key=lambda x: x.score, reverse=True)[:k]
+        return sorted_results
             
     async def _metadata_retrieval(self, processed_query: ProcessedQuery, k: int) -> List[RetrievalResult]:
         if not processed_query.metadata_filters:
