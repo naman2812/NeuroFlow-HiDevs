@@ -11,6 +11,7 @@ class ProcessedQuery(BaseModel):
     expanded_queries: List[str]
     metadata_filters: Dict[str, Any]
     query_type: str
+    hypothetical_document: Optional[str] = None
 
 class QueryProcessor:
     def __init__(self, client: NeuroFlowClient):
@@ -22,6 +23,7 @@ You are an expert search query processing engine. Analyze the user's query and o
 1. "expanded_queries": A list of 2-3 alternative phrasings or expansions of the query to improve search recall. Use different vocabulary but keep the same semantic meaning.
 2. "metadata_filters": A JSON object containing any explicit or implicit filters mentioned in the query (e.g., {"year": 2023, "topic": "climate"}). If none, output an empty object {}.
 3. "query_type": Classify the query into exactly one of: "factual", "analytical", "comparative", or "procedural".
+4. "hypothetical_document": A detailed hypothetical passage or paragraph that directly answers the user's query. Write it in the tone and style of the documents that might contain the answer.
 
 Output ONLY valid JSON.
 """
@@ -50,7 +52,8 @@ Output ONLY valid JSON.
                 original_query=query,
                 expanded_queries=parsed.get("expanded_queries", []),
                 metadata_filters=parsed.get("metadata_filters", {}),
-                query_type=parsed.get("query_type", "factual")
+                query_type=parsed.get("query_type", "factual"),
+                hypothetical_document=parsed.get("hypothetical_document")
             )
         except Exception as e:
             # Fallback on failure
@@ -58,5 +61,6 @@ Output ONLY valid JSON.
                 original_query=query,
                 expanded_queries=[],
                 metadata_filters={},
-                query_type="factual"
+                query_type="factual",
+                hypothetical_document=None
             )

@@ -15,7 +15,7 @@ class RetrievalPipeline:
         self.reranker = CrossEncoderReranker(client)
         self.context_assembler = ContextAssembler()
         
-    async def retrieve(self, query: str, k: int = 10, token_budget: int = 4000) -> List[RetrievalResult]:
+    async def retrieve(self, query: str, k: int = 10, token_budget: int = 4000, use_hyde: bool = False) -> List[RetrievalResult]:
         """
         Mainly for evaluation script which expects a list of results.
         Executes up to reranking and returns the top K results.
@@ -25,7 +25,7 @@ class RetrievalPipeline:
         
         # Step 2: Parallel Retrieval & Fusion
         # Pass k=60 to retriever to have enough candidates for reranking
-        retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60))
+        retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde)
         
         # Step 3: Reranking
         # Take top 40 for reranking as per instructions
@@ -33,12 +33,12 @@ class RetrievalPipeline:
         
         return reranked_results[:k]
         
-    async def get_context(self, query: str, k: int = 10, token_budget: int = 4000) -> Dict[str, Any]:
+    async def get_context(self, query: str, k: int = 10, token_budget: int = 4000, use_hyde: bool = False) -> Dict[str, Any]:
         """
         Executes the full pipeline including context assembly.
         """
         processed_query = await self.query_processor.process_query(query)
-        retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60))
+        retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde)
         reranked_results = await self.reranker.rerank(query, retrieved_results, top_n=40)
         
         final_results = reranked_results[:k]

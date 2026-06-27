@@ -13,10 +13,10 @@ class Retriever:
         self.db_pool = db_pool
         self.client = client
         
-    async def retrieve(self, processed_query: ProcessedQuery, k: int = 20) -> List[RetrievalResult]:
+    async def retrieve(self, processed_query: ProcessedQuery, k: int = 20, use_hyde: bool = False) -> List[RetrievalResult]:
         # Run three strategies in parallel
         results = await asyncio.gather(
-            self._dense_retrieval(processed_query, k),
+            self._dense_retrieval(processed_query, k, use_hyde),
             self._sparse_retrieval(processed_query, k),
             self._metadata_retrieval(processed_query, k)
         )
@@ -24,8 +24,11 @@ class Retriever:
         # Fuse results
         return reciprocal_rank_fusion(list(results))
         
-    async def _dense_retrieval(self, processed_query: ProcessedQuery, k: int) -> List[RetrievalResult]:
-        queries = [processed_query.original_query] + processed_query.expanded_queries
+    async def _dense_retrieval(self, processed_query: ProcessedQuery, k: int, use_hyde: bool) -> List[RetrievalResult]:
+        if use_hyde and processed_query.hypothetical_document:
+            queries = [processed_query.hypothetical_document] + processed_query.expanded_queries
+        else:
+            queries = [processed_query.original_query] + processed_query.expanded_queries
         
         # Embed all queries (original + expanded) in one shot
         embeddings = await self.client.embed(queries)
