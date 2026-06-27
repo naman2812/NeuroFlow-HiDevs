@@ -1,0 +1,49 @@
+import asyncio
+from typing import List
+from backend.providers.client import NeuroFlowClient
+from backend.providers.base import ChatMessage
+from backend.providers.router import RoutingCriteria
+from .models import RetrievalResult
+
+class CrossEncoderReranker:
+    def __init__(self, client: NeuroFlowClient):
+        self.client = client
+        
+    async def rerank(self, query: str, results: List[RetrievalResult], top_n: int = 40) -> List[RetrievalResult]:
+        # Take top_n candidates
+        candidates = results[:top_n]
+        
+        # We need to rate each candidate
+        tasks = []
+        for candidate in candidates:
+            tasks.append(self._score_candidate(query, candidate))
+            
+        scored_candidates = await asyncio.gather(*tasks)
+        
+        # Sort descending by new score
+        scored_candidates.sort(key=lambda x: x.score, reverse=True)
+        return scored_candidates
+        
+    async def _score_candidate(self, query: str, result: RetrievalResult) -> RetrievalResult:
+        prompt = f"Rate the relevance of this passage to the query on a scale of 0-10. Query: {query}. Passage: {result.content}. Return only the number."
+        
+        messages = [
+            ChatMessage(role="user", content=prompt)
+        ]
+        
+        criteria = RoutingCriteria(task_type="evaluation")
+        
+        try:
+            llm_result = await self.client.chat(messages, criteria)
+            # Try to parse the number
+            content = llm_result.message.content.strip()
+            # Clean up potential extra text around the number
+            score_str = ''.join(c for c in content if c.isdigit() or c == '.')
+            score = float(score_str) if score_str else 0.0
+            
+            result.score = score
+        except Exception:
+            # Fallback if LLM fails or parsing fails
+            result.score = 0.0
+            
+        return result
