@@ -23,5 +23,10 @@ async def run_migrations():
                 await conn.execute(schema_sql)
             else:
                 print("Schema already applied.")
+                
+            # Add prompt column to pipeline_runs if it doesn't exist
+            print("Applying ALTER TABLE for pipeline_runs prompt and metadata columns")
+            await conn.execute("ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS prompt TEXT;")
+            await conn.execute("ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';")
         except Exception as e:
             print(f"Migration error: {e}")

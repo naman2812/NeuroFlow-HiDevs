@@ -92,7 +92,7 @@ class NeuroFlowClient:
                     span.set_attribute("model", model_name)
                     
                     # Test if stream initiates successfully
-                    stream_gen = await provider.stream(messages, **kwargs)
+                    stream_gen = provider.stream(messages, **kwargs)
                     
                     # We can't easily fallback if the stream fails halfway through processing,
                     # but we can fallback if it fails to initiate.
