@@ -170,7 +170,7 @@ async def get_pipeline_analytics(id: UUID = Path(...)):
                 percentile_cont(0.5) WITHIN GROUP (ORDER BY retrieval_latency_ms) as p50_retrieval_latency,
                 percentile_cont(0.95) WITHIN GROUP (ORDER BY retrieval_latency_ms) as p95_retrieval_latency,
                 percentile_cont(0.99) WITHIN GROUP (ORDER BY retrieval_latency_ms) as p99_retrieval_latency,
-                AVG(latency_ms - COALESCE(retrieval_latency_ms, 0)) as avg_generation_latency,
+                AVG(latency_ms) as avg_generation_latency,
                 AVG(e.faithfulness) as avg_faithfulness,
                 AVG(e.answer_relevance) as avg_relevance,
                 AVG(e.context_precision) as avg_precision,
