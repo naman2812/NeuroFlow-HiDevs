@@ -33,10 +33,20 @@ class RetrievalPipeline:
         
         return reranked_results[:k]
         
-    async def get_context(self, query: str, k: int = 10, token_budget: int = 4000, use_hyde: bool = False) -> Dict[str, Any]:
+    async def get_context(self, query: str, config: Dict[str, Any] = None, k: int = 10, token_budget: int = 4000, use_hyde: bool = False) -> Dict[str, Any]:
         """
         Executes the full pipeline including context assembly.
         """
+        if config and "retrieval" in config:
+            retrieval_conf = config["retrieval"]
+            k = retrieval_conf.get("top_k_after_rerank", k)
+            # We could use dense_k, query_expansion, etc. if supported
+            if "query_expansion" in retrieval_conf:
+                use_hyde = retrieval_conf["query_expansion"]
+                
+        if config and "generation" in config:
+            token_budget = config["generation"].get("max_context_tokens", token_budget)
+            
         processed_query = await self.query_processor.process_query(query)
         retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde)
         reranked_results = await self.reranker.rerank(query, retrieved_results, top_n=40)

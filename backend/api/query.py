@@ -51,15 +51,22 @@ async def submit_query(req: QueryRequest, request: Request):
     retrieval_pipeline = RetrievalPipeline(pool, client)
     generator = StreamingGenerator(client, pool, redis_client)
     
+    # Fetch pipeline config
+    pipeline_config = None
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT config FROM pipelines WHERE id = $1", req.pipeline_id)
+        if row:
+            pipeline_config = json.loads(row["config"]) if isinstance(row["config"], str) else row["config"]
+            
     # Retrieval
-    context_data = await retrieval_pipeline.get_context(req.query)
+    context_data = await retrieval_pipeline.get_context(req.query, config=pipeline_config)
     
     # Generation
     full_text = ""
     citations = []
     
     # We must iterate the async generator
-    stream_gen = generator.generate_stream(str(run_id), str(req.pipeline_id), req.query, context_data.get("query_type", "factual"), context_data)
+    stream_gen = generator.generate_stream(str(run_id), str(req.pipeline_id), req.query, context_data.get("query_type", "factual"), context_data, config=pipeline_config)
     
     async for chunk, batch_citations in stream_gen:
         full_text += chunk
@@ -126,12 +133,18 @@ async def stream_query(run_id: UUID, request: Request):
             
             async def worker():
                 try:
-                    context_data = await retrieval_pipeline.get_context(query)
+                    pipeline_config = None
+                    async with pool.acquire() as conn:
+                        row = await conn.fetchrow("SELECT config FROM pipelines WHERE id = $1", pipeline_id)
+                        if row:
+                            pipeline_config = json.loads(row["config"]) if isinstance(row["config"], str) else row["config"]
+
+                    context_data = await retrieval_pipeline.get_context(query, config=pipeline_config)
                     sources = [s.metadata.get("filename", f"doc_{s.document_id}") for s in context_data["raw_results"]]
                     
                     await queue.put({"type": "retrieval_complete", "chunk_count": len(sources), "sources": list(set(sources))})
                     
-                    stream_gen = generator.generate_stream(str(run_id), str(pipeline_id), query, context_data.get("query_type", "factual"), context_data)
+                    stream_gen = generator.generate_stream(str(run_id), str(pipeline_id), query, context_data.get("query_type", "factual"), context_data, config=pipeline_config)
                     async for chunk, batch_citations in stream_gen:
                         if chunk:
                             await queue.put({"type": "token", "delta": chunk})
