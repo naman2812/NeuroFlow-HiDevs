@@ -53,48 +53,61 @@ class FineTuneExtractor:
         if not CITATION_REGEX.search(assistant_msg):
             return False
             
-        # Faithfulness check
-        faithfulness = pair.get("faithfulness")
-        if faithfulness is None:
-            # Re-evaluate
-            if not self.client:
+        # Always Re-evaluate faithfulness
+        if not self.client:
+            return False
+            
+        # To evaluate faithfulness, we need context. We fetch context from chunks.
+        run_id = pair.get("run_id")
+        async with self.db_pool.acquire() as conn:
+            run_row = await conn.fetchrow("SELECT retrieved_chunk_ids FROM pipeline_runs WHERE id = $1", run_id)
+            if not run_row or not run_row["retrieved_chunk_ids"]:
                 return False
-                
-            # To evaluate faithfulness, we need context. We fetch context from chunks.
-            run_id = pair.get("run_id")
-            async with self.db_pool.acquire() as conn:
-                run_row = await conn.fetchrow("SELECT retrieved_chunk_ids FROM pipeline_runs WHERE id = $1", run_id)
-                if not run_row or not run_row["retrieved_chunk_ids"]:
-                    return False
-                
-                chunk_ids = run_row["retrieved_chunk_ids"]
-                chunk_rows = await conn.fetch("SELECT content FROM chunks WHERE id = ANY($1)", chunk_ids)
-                context = "\n".join([r["content"] for r in chunk_rows])
-                
-            try:
-                faithfulness = await evaluate_faithfulness(
-                    query=user_msg, 
-                    generation=assistant_msg, 
-                    context=context, 
-                    client=self.client
-                )
-            except Exception:
-                return False
-                
+            
+            chunk_ids = run_row["retrieved_chunk_ids"]
+            chunk_rows = await conn.fetch("SELECT content FROM chunks WHERE id = ANY($1)", chunk_ids)
+            context = "\n".join([r["content"] for r in chunk_rows])
+            
+        try:
+            faithfulness = await evaluate_faithfulness(
+                query=user_msg, 
+                generation=assistant_msg, 
+                context=context, 
+                client=self.client
+            )
+        except Exception:
+            return False
+            
         if faithfulness is None or faithfulness <= 0.8:
             return False
             
         return True
 
-    def format_jsonl_message(self, pair: Dict[str, Any]) -> str:
+    def format_jsonl_message(self, pair: Dict[str, Any], context: str = "") -> str:
         messages = []
         if pair.get("system_prompt"):
             messages.append({"role": "system", "content": pair["system_prompt"]})
         
-        messages.append({"role": "user", "content": pair["user_message"]})
+        user_msg = pair["user_message"]
+        if context:
+            user_msg = f"[Context]\n{context}\n[Question]\n{user_msg}"
+            
+        messages.append({"role": "user", "content": user_msg})
         messages.append({"role": "assistant", "content": pair["assistant_message"]})
         
         return json.dumps({"messages": messages})
+
+    async def get_context_for_run(self, run_id: UUID) -> str:
+        async with self.db_pool.acquire() as conn:
+            run_row = await conn.fetchrow("SELECT retrieved_chunk_ids FROM pipeline_runs WHERE id = $1", run_id)
+            if not run_row or not run_row["retrieved_chunk_ids"]:
+                return ""
+            
+            chunk_ids = run_row["retrieved_chunk_ids"]
+            if not chunk_ids:
+                return ""
+            chunk_rows = await conn.fetch("SELECT content FROM chunks WHERE id = ANY($1)", chunk_ids)
+            return "\n".join([r["content"] for r in chunk_rows])
 
     async def extract_for_job(self, job_id: UUID) -> List[Dict[str, Any]]:
         candidates = await self.get_candidates()
@@ -102,6 +115,9 @@ class FineTuneExtractor:
         
         for pair in candidates:
             if await self.validate_pair(pair):
+                # Fetch context for the valid pair to include in the JSONL
+                context = await self.get_context_for_run(pair["run_id"])
+                pair["context"] = context
                 valid_pairs.append(pair)
                 
         if not valid_pairs:
@@ -112,7 +128,7 @@ class FineTuneExtractor:
         file_path = f"training_data/{job_id}.jsonl"
         with open(file_path, "w", encoding="utf-8") as f:
             for pair in valid_pairs:
-                f.write(self.format_jsonl_message(pair) + "\n")
+                f.write(self.format_jsonl_message(pair, pair.get("context", "")) + "\n")
                 
         # Update included_in_job in database
         pair_ids = [p["id"] for p in valid_pairs]
