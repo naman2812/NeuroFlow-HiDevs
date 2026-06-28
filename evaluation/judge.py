@@ -155,3 +155,5 @@ class EvaluationJudge:
                         """,
                         UUID(run_id)
                     )
+            
+            return avg_overall

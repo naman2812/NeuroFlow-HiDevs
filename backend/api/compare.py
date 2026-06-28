@@ -76,9 +76,7 @@ async def run_pipeline(pool, redis_client, pipeline_id: UUID, query: str) -> Dic
             
         # Evaluation Job
         judge = EvaluationJudge(pool, redis_client)
-        # Run it in background task (asyncio.create_task)
-        # Note: in a real production system we use arq, but here create_task is acceptable
-        asyncio.create_task(judge.evaluate_run(str(run_id)))
+        eval_score = await judge.evaluate_run(str(run_id))
         
         return {
             "run_id": str(run_id),
@@ -86,7 +84,7 @@ async def run_pipeline(pool, redis_client, pipeline_id: UUID, query: str) -> Dic
             "retrieval_latency_ms": retrieval_latency_ms,
             "total_latency_ms": total_latency_ms,
             "chunks_used": len(context_data.get("raw_results", [])),
-            "eval_score": None # Evaluates async
+            "eval_score": eval_score
         }
     except Exception as e:
         async with pool.acquire() as conn:
