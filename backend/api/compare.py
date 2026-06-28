@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import redis.asyncio as aioredis
 from typing import Dict, Any
 
+import json
 from backend.db.pool import get_pool
 from backend.config import settings
 from backend.providers.client import NeuroFlowClient
