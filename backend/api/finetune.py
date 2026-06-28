@@ -14,6 +14,7 @@ router = APIRouter(prefix="/finetune", tags=["finetune"])
 
 class FineTuneRequest(BaseModel):
     base_model: str = "gpt-3.5-turbo-0613"
+    format: str = "sft" # "sft" or "dpo"
 
 async def get_redis():
     client = aioredis.from_url(
@@ -29,12 +30,17 @@ async def get_redis():
 async def create_finetune_job(req: FineTuneRequest, db_pool=Depends(get_pool), redis_client=Depends(get_redis)):
     job_id = uuid4()
     
+    if req.format not in ["sft", "dpo"]:
+        raise HTTPException(status_code=400, detail="format must be 'sft' or 'dpo'")
+    
     # Extract & Validate
     extractor = FineTuneExtractor(db_pool, redis_client)
-    valid_pairs = await extractor.extract_for_job(job_id)
+    valid_pairs = await extractor.extract_for_job(job_id, format=req.format)
     
-    if len(valid_pairs) < 10: # Minimum pairs for OpenAI is usually 10
+    if len(valid_pairs) < 10 and req.format == "sft": # Minimum pairs for OpenAI is usually 10
         raise HTTPException(status_code=400, detail=f"Not enough valid training pairs found (found {len(valid_pairs)}, need 10+)")
+    elif len(valid_pairs) == 0 and req.format == "dpo":
+        raise HTTPException(status_code=400, detail="No valid DPO pairs found")
         
     # Start MLflow run
     tracker = FineTuneTracker(tracking_uri="http://mlflow:5000" if settings.postgres_host == "postgres" else "http://localhost:5000")
@@ -77,13 +83,22 @@ async def get_finetune_job(job_id: UUID, db_pool=Depends(get_pool)):
     return job_data
 
 @router.get("/training-data/preview")
-async def preview_training_data(db_pool=Depends(get_pool), redis_client=Depends(get_redis)):
+async def preview_training_data(format: str = "sft", db_pool=Depends(get_pool), redis_client=Depends(get_redis)):
+    if format not in ["sft", "dpo"]:
+        raise HTTPException(status_code=400, detail="format must be 'sft' or 'dpo'")
+        
     extractor = FineTuneExtractor(db_pool, redis_client)
-    candidates = await extractor.get_candidates(limit=50) # Get a batch
+    candidates = await extractor.get_dpo_candidates(limit=50) if format == "dpo" else await extractor.get_candidates(limit=50)
     
     valid_pairs = []
     for pair in candidates:
-        if await extractor.validate_pair(pair):
+        if format == "sft":
+            if await extractor.validate_pair(pair):
+                valid_pairs.append(pair)
+                if len(valid_pairs) == 5:
+                    break
+        else:
+            # DPO doesn't have deep validation yet
             valid_pairs.append(pair)
             if len(valid_pairs) == 5:
                 break

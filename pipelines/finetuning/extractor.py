@@ -36,6 +36,27 @@ class FineTuneExtractor:
             
         return [dict(r) for r in records]
 
+    async def get_dpo_candidates(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        query = """
+            SELECT 
+                tp.id, r_good.run_id as run_id, r_good.query as prompt,
+                r_good.generation as chosen,
+                r_bad.generation as rejected
+            FROM training_pairs tp
+            JOIN pipeline_runs r_good ON r_good.id = tp.run_id
+            JOIN evaluations e_good ON e_good.run_id = r_good.id
+            JOIN pipeline_runs r_bad ON r_bad.query = r_good.query
+            JOIN evaluations e_bad ON e_bad.run_id = r_bad.id
+            WHERE e_good.user_rating >= 4
+              AND e_bad.user_rating <= 2
+              AND tp.included_in_job IS NULL
+            LIMIT $1
+        """
+        async with self.db_pool.acquire() as conn:
+            records = await conn.fetch(query, limit)
+            
+        return [dict(r) for r in records]
+
     async def validate_pair(self, pair: Dict[str, Any]) -> bool:
         # PII Check on query (user_message)
         user_msg = pair.get("user_message", "")
@@ -109,13 +130,23 @@ class FineTuneExtractor:
             chunk_rows = await conn.fetch("SELECT content FROM chunks WHERE id = ANY($1)", chunk_ids)
             return "\n".join([r["content"] for r in chunk_rows])
 
-    async def extract_for_job(self, job_id: UUID) -> List[Dict[str, Any]]:
-        candidates = await self.get_candidates()
+    async def extract_for_job(self, job_id: UUID, format: str = "sft") -> List[Dict[str, Any]]:
+        if format == "dpo":
+            candidates = await self.get_dpo_candidates()
+        else:
+            candidates = await self.get_candidates()
+            
         valid_pairs = []
         
         for pair in candidates:
-            if await self.validate_pair(pair):
-                # Fetch context for the valid pair to include in the JSONL
+            if format == "sft":
+                if await self.validate_pair(pair):
+                    # Fetch context for the valid pair to include in the JSONL
+                    context = await self.get_context_for_run(pair["run_id"])
+                    pair["context"] = context
+                    valid_pairs.append(pair)
+            else:
+                # DPO validation (we skip deep validation for simplicity, just fetch context)
                 context = await self.get_context_for_run(pair["run_id"])
                 pair["context"] = context
                 valid_pairs.append(pair)
@@ -128,7 +159,17 @@ class FineTuneExtractor:
         file_path = f"training_data/{job_id}.jsonl"
         with open(file_path, "w", encoding="utf-8") as f:
             for pair in valid_pairs:
-                f.write(self.format_jsonl_message(pair, pair.get("context", "")) + "\n")
+                if format == "dpo":
+                    prompt = pair["prompt"]
+                    if pair.get("context"):
+                        prompt = f"[Context]\n{pair['context']}\n[Question]\n{prompt}"
+                    f.write(json.dumps({
+                        "prompt": prompt,
+                        "chosen": pair["chosen"],
+                        "rejected": pair["rejected"]
+                    }) + "\n")
+                else:
+                    f.write(self.format_jsonl_message(pair, pair.get("context", "")) + "\n")
                 
         # Update included_in_job in database
         pair_ids = [p["id"] for p in valid_pairs]
