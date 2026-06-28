@@ -50,8 +50,14 @@ async def process_document(ctx, document_id: str, file_path: str, source_type: s
         source_type=source_type
     )
 
+from arq.cron import cron
+from pipelines.finetuning.job_manager import poll_finetune_jobs
+
 class WorkerSettings:
     functions = [process_document]
+    cron_jobs = [
+        cron(poll_finetune_jobs, second=0)
+    ]
     redis_settings = RedisSettings(
         host=settings.redis_host,
         port=settings.redis_port,
