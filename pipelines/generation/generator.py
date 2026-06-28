@@ -24,7 +24,8 @@ class StreamingGenerator:
         pipeline_id: str,
         query: str, 
         query_type: str,
-        assembled_context: Dict[str, Any]
+        assembled_context: Dict[str, Any],
+        config: Dict[str, Any] = None
     ) -> AsyncGenerator[Tuple[str, List[Dict[str, Any]]], None]:
         
         prompt = build_prompt(query, assembled_context["context_data"], query_type)
@@ -41,7 +42,23 @@ class StreamingGenerator:
             )
             
         messages = [ChatMessage(role="user", content=prompt)]
-        criteria = RoutingCriteria(task_type="rag_generation")
+        
+        task_type = "rag_generation"
+        max_cost = 0.05
+        temperature = 0.2
+        if config and "generation" in config:
+            gen_conf = config["generation"]
+            if "model_routing" in gen_conf:
+                task_type = gen_conf["model_routing"].get("task_type", task_type)
+                max_cost = gen_conf["model_routing"].get("max_cost_per_call", max_cost)
+            temperature = gen_conf.get("temperature", temperature)
+            
+        criteria = RoutingCriteria(task_type=task_type, max_cost_per_call=max_cost)
+        
+        # Override client stream_chat temperature if supported? The provider interface usually relies on kwargs.
+        # We can pass temperature as kwargs to stream_chat in NeuroFlowClient.
+        # Actually our NeuroFlowClient.stream_chat(messages, criteria, **kwargs) handles extra kwargs.
+        stream_gen = await self.client.stream_chat(messages, criteria, temperature=temperature)
         
         start_time = time.time()
         
@@ -52,8 +69,6 @@ class StreamingGenerator:
         clean_response = []
         
         # Stream from LLM
-        stream_gen = await self.client.stream_chat(messages, criteria)
-        
         async for chunk in stream_gen:
             full_response.append(chunk)
             buffer += chunk
