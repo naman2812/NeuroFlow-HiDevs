@@ -216,3 +216,12 @@ async def get_pipeline_analytics(id: UUID = Path(...)):
         res["daily_queries"] = [{"day": r["day"].isoformat(), "count": r["query_count"]} for r in daily_series]
         
         return res
+
+from backend.services.pipeline_optimizer import PipelineOptimizer
+
+@router.get("/{id}/suggestions")
+async def get_pipeline_suggestions(id: UUID = Path(...)):
+    pool = get_pool()
+    optimizer = PipelineOptimizer(pool)
+    suggestions = await optimizer.get_suggestions(id)
+    return {"suggestions": suggestions}
