@@ -28,5 +28,8 @@ async def run_migrations():
             print("Applying ALTER TABLE for pipeline_runs prompt and metadata columns")
             await conn.execute("ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS prompt TEXT;")
             await conn.execute("ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';")
+            
+            print("Applying ALTER TABLE for evaluations metadata column")
+            await conn.execute("ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';")
         except Exception as e:
             print(f"Migration error: {e}")
