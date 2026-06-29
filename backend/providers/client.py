@@ -10,7 +10,7 @@ from .router import ModelRouter, RoutingCriteria
 
 from backend.resilience.circuit_breaker import CircuitBreaker
 from backend.resilience.rate_limiter import consume_llm_token
-from backend.resilience.timeouts import TimeoutManager
+from backend.resilience.timeout_manager import TimeoutManager
 
 tracer = trace.get_tracer(__name__)
 
