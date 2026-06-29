@@ -98,27 +98,38 @@ class NeuroFlowClient:
             try:
                 provider = self._get_provider(provider_name, model_name)
                 
-                with tracer.start_as_current_span("neuroflow.llm.stream_chat") as span:
-                    span.set_attribute("provider", provider_name)
-                    span.set_attribute("model", model_name)
+                span = tracer.start_span("neuroflow.llm.stream_chat")
+                span.set_attribute("provider", provider_name)
+                span.set_attribute("model", model_name)
+                
+                # Wait for global LLM token limit
+                await consume_llm_token(provider_name)
+                
+                stream_gen = provider.stream(messages, **kwargs)
+                
+                async def _get_first():
+                    return await stream_gen.__anext__()
                     
-                    # Wait for global LLM token limit
-                    await consume_llm_token(provider_name)
+                # Test connection by fetching the first chunk
+                async with CircuitBreaker(provider_name):
+                    first_chunk = await TimeoutManager.run("chat_completion", _get_first())
                     
-                    # Test if stream initiates successfully
-                    async with CircuitBreaker(provider_name):
-                        stream_gen = provider.stream(messages, **kwargs)
-                    
-                    # We can't easily fallback if the stream fails halfway through processing,
-                    # but we can fallback if it fails to initiate.
-                    # Since stream methods return generators or context managers, we must test initialization.
-                    # Actually, if provider.stream itself raises, we catch it here.
-                    
-                    async def stream_wrapper():
-                        async for chunk in stream_gen:
-                            yield chunk
+                async def stream_wrapper():
+                    with trace.use_span(span, end_on_exit=True):
+                        try:
+                            yield first_chunk
+                            async for chunk in stream_gen:
+                                yield chunk
+                        except Exception as e:
+                            span.record_exception(e)
+                            raise e
                             
-                    return stream_wrapper()
+                return stream_wrapper()
+            except StopAsyncIteration:
+                # Empty stream
+                async def empty_stream():
+                    yield ""
+                return empty_stream()
             except Exception as e:
                 last_exception = e
                 continue
