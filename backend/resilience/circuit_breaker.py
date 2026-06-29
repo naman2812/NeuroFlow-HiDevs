@@ -1,6 +1,7 @@
 import time
 import redis.asyncio as aioredis
 from backend.config import settings
+from backend.monitoring.metrics import circuit_breaker_trips, active_circuit_breakers_open
 
 class CircuitOpenError(Exception):
     pass
@@ -64,6 +65,7 @@ class CircuitBreaker:
                 # If any succeed -> closed
                 await self.redis.set(self.state_key, "closed")
                 await self.redis.set(self.failure_key, 0)
+                active_circuit_breakers_open.dec()
             elif state == "closed":
                 # Reset failures on success
                 await self.redis.set(self.failure_key, 0)
@@ -78,12 +80,15 @@ class CircuitBreaker:
                 # If any fail -> open again
                 await self.redis.set(self.state_key, "open")
                 await self.redis.set(self.opened_at_key, str(time.time()))
+                circuit_breaker_trips.labels(provider=self.name).inc()
             elif state == "closed":
                 failures = await self.redis.incr(self.failure_key)
                 if failures >= self.failure_threshold:
                     # Open the circuit
                     await self.redis.set(self.state_key, "open")
                     await self.redis.set(self.opened_at_key, str(time.time()))
+                    circuit_breaker_trips.labels(provider=self.name).inc()
+                    active_circuit_breakers_open.inc()
         
         # We do not suppress exceptions
         return False

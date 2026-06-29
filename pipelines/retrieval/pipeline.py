@@ -7,6 +7,11 @@ from .retriever import Retriever
 from .reranker import CrossEncoderReranker
 from .context_assembler import ContextAssembler
 from .models import RetrievalResult
+from opentelemetry import trace
+import time
+from backend.monitoring.metrics import retrieval_latency
+
+tracer = trace.get_tracer(__name__)
 
 class RetrievalPipeline:
     def __init__(self, db_pool: asyncpg.Pool, client: NeuroFlowClient):
@@ -37,29 +42,36 @@ class RetrievalPipeline:
         """
         Executes the full pipeline including context assembly.
         """
-        if config and "retrieval" in config:
-            retrieval_conf = config["retrieval"]
-            k = retrieval_conf.get("top_k_after_rerank", k)
-            # We could use dense_k, query_expansion, etc. if supported
-            if "query_expansion" in retrieval_conf:
-                use_hyde = retrieval_conf["query_expansion"]
+        start_time = time.time()
+        with tracer.start_as_current_span("retrieval.pipeline") as span:
+            if config and "retrieval" in config:
+                retrieval_conf = config["retrieval"]
+                k = retrieval_conf.get("top_k_after_rerank", k)
+                # We could use dense_k, query_expansion, etc. if supported
+                if "query_expansion" in retrieval_conf:
+                    use_hyde = retrieval_conf["query_expansion"]
+                    
+            if config and "generation" in config:
+                token_budget = config["generation"].get("max_context_tokens", token_budget)
                 
-        if config and "generation" in config:
-            token_budget = config["generation"].get("max_context_tokens", token_budget)
+            processed_query = await self.query_processor.process_query(query)
+            retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde)
+            reranked_results = await self.reranker.rerank(query, retrieved_results, top_n=40)
             
-        processed_query = await self.query_processor.process_query(query)
-        retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde)
-        reranked_results = await self.reranker.rerank(query, retrieved_results, top_n=40)
-        
-        final_results = reranked_results[:k]
-        
-        self.context_assembler.token_budget = token_budget
-        assembled_context = self.context_assembler.assemble(final_results)
-        
-        return {
-            "query": processed_query.original_query,
-            "expanded_queries": processed_query.expanded_queries,
-            "query_type": processed_query.query_type,
-            "context_data": assembled_context,
-            "raw_results": final_results
-        }
+            final_results = reranked_results[:k]
+            
+            self.context_assembler.token_budget = token_budget
+            assembled_context = self.context_assembler.assemble(final_results)
+            
+            span.set_attribute("final_chunks", len(final_results))
+            
+            duration = time.time() - start_time
+            retrieval_latency.labels(strategy="full_pipeline").observe(duration)
+            
+            return {
+                "query": processed_query.original_query,
+                "expanded_queries": processed_query.expanded_queries,
+                "query_type": processed_query.query_type,
+                "context_data": assembled_context,
+                "raw_results": final_results
+            }
