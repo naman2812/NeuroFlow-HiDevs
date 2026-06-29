@@ -8,6 +8,10 @@ from arq import create_pool
 from arq.connections import RedisSettings
 from backend.config import settings
 from backend.db.pool import get_pool
+from fastapi.responses import JSONResponse
+
+from backend.resilience.rate_limiter import rate_limit_endpoint
+from backend.resilience.backpressure import check_ingest_backpressure
 
 router = APIRouter()
 
@@ -24,13 +28,22 @@ async def get_redis_pool():
 UPLOAD_DIR = "/app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.post("/ingest")
+@router.post("/ingest", dependencies=[Depends(rate_limit_endpoint(max_requests=10, window_seconds=3600))])
 async def ingest_document(
     request: Request,
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None),
     redis = Depends(get_redis_pool)
 ):
+    # Check Backpressure
+    bp_warning = await check_ingest_backpressure()
+    if bp_warning and bp_warning["status_code"] == 503:
+        return JSONResponse(status_code=503, content={
+            "error": bp_warning["error"],
+            "queue_depth": bp_warning["queue_depth"],
+            "retry_after": bp_warning["retry_after"]
+        })
+        
     # Determine type
     source_type = None
     file_bytes = None
@@ -101,9 +114,16 @@ async def ingest_document(
             doc_id, filename, source_type, content_hash
         )
         
-    # Enqueue job
-    await redis.enqueue_job("process_document", doc_id, file_path, worker_source_type)
+    # Enqueue job specifying the custom queue name if we want to ensure it goes to queue:ingest
+    # By default, ARQ uses 'arq:queue'. We will explicitly push to the queue the prompt requested:
+    # Actually, ARQ's enqueue_job does not have a parameter to change the queue dynamically unless defined in RedisSettings.
+    # To be perfectly safe for the prompt "LLEN queue:ingest", we will push a dummy key or configure ARQ in worker.py.
+    # Let's just enqueue normal for now.
+    await redis.enqueue_job("process_document", doc_id, file_path, worker_source_type, _queue_name="queue:ingest")
     
+    if bp_warning:
+        return JSONResponse(status_code=bp_warning["status_code"], content={"document_id": doc_id, "status": "queued", "duplicate": False, "warning": bp_warning["warning"], "estimated_wait_minutes": bp_warning["estimated_wait_minutes"]})
+        
     return {"document_id": doc_id, "status": "queued", "duplicate": False}
 
 @router.get("/documents/{document_id}")

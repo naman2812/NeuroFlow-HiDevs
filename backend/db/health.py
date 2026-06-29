@@ -1,21 +1,25 @@
+import time
 import asyncpg
 import redis.asyncio as redis
 import httpx
 from backend.config import settings
 from backend.db.pool import get_pool
 
-async def check_postgres() -> bool:
+async def check_postgres() -> dict:
+    start = time.perf_counter()
     pool = get_pool()
     if not pool:
-        return False
+        return {"status": "error", "latency_ms": 0}
     try:
         async with pool.acquire() as conn:
             await conn.execute("SELECT 1")
-        return True
+        latency = int((time.perf_counter() - start) * 1000)
+        return {"status": "ok", "latency_ms": latency}
     except Exception:
-        return False
+        return {"status": "error", "latency_ms": 0}
 
-async def check_redis() -> bool:
+async def check_redis() -> dict:
+    start = time.perf_counter()
     try:
         r = redis.Redis(
             host=settings.redis_host,
@@ -24,15 +28,20 @@ async def check_redis() -> bool:
         )
         await r.ping()
         await r.close()
-        return True
+        latency = int((time.perf_counter() - start) * 1000)
+        return {"status": "ok", "latency_ms": latency}
     except Exception:
-        return False
+        return {"status": "error", "latency_ms": 0}
 
-async def check_mlflow() -> bool:
+async def check_mlflow() -> dict:
+    start = time.perf_counter()
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{settings.mlflow_uri}/health")
-            # MLflow returns 200 on health
-            return response.status_code == 200
+            response = await client.get(f"{settings.mlflow_uri}/health", timeout=2.0)
+            latency = int((time.perf_counter() - start) * 1000)
+            if response.status_code == 200:
+                return {"status": "ok", "latency_ms": latency}
+            else:
+                return {"status": "error", "latency_ms": latency}
     except Exception:
-        return False
+        return {"status": "error", "latency_ms": 0}
