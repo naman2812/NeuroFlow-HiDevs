@@ -217,8 +217,9 @@ async def process_evaluation_queue():
                                 if overall_score < (mean_score - 2 * stddev_score):
                                     import httpx
                                     async with httpx.AsyncClient() as client:
-                                        # Use HTTP POST as requested
-                                        url = f"http://localhost:8000/pipelines/{pipeline_id}/suggestions"
+                                        # Use HTTP POST as requested (point to api service for docker network, fallback to localhost)
+                                        api_host = "api" if settings.postgres_host == "postgres" else "localhost"
+                                        url = f"http://{api_host}:8000/pipelines/{pipeline_id}/suggestions"
                                         resp = await client.post(url)
                                         suggestions_data = resp.json()
                                         suggestions = suggestions_data.get("suggestions", [])
