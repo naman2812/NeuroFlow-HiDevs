@@ -57,6 +57,7 @@ async def process_document_pipeline(
                 texts = [c.content for c in chunks]
                 embeddings = await client.embed(texts) if texts else []
                 embed_span.set_attribute("embedding_calls", 1 if embeddings else 0)
+                embed_span.set_attribute("model", "default_embedding_model")
                 span.set_attribute("embedding_calls", 1 if embeddings else 0)
             
             # 4. DB Persistence
@@ -86,12 +87,16 @@ async def process_document_pipeline(
             
             # Prometheus Metric Update
             ingestion_docs_total.labels(source_type=source_type).inc()
+            
+            total_tokens = sum(c.token_count for c in chunks)
+            chunk_span.set_attribute("token_count", total_tokens)
+            span.set_attribute("token_count", total_tokens)
                     
             logger.info(json.dumps({
                 "event": "ingestion_complete",
                 "document_id": str(document_id),
                 "chunks": len(chunks),
-                "tokens": sum(c.token_count for c in chunks)
+                "tokens": total_tokens
             }))
             
         except Exception as e:

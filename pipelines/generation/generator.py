@@ -11,7 +11,7 @@ from backend.providers.router import RoutingCriteria
 from pipelines.generation.prompt_builder import build_prompt
 from pipelines.generation.citations import parse_citations
 from opentelemetry import trace
-from backend.monitoring.metrics import generation_latency, lm_calls_total
+from backend.monitoring.metrics import generation_latency, lm_calls_total, llm_cost
 
 tracer = trace.get_tracer(__name__)
 
@@ -79,6 +79,7 @@ class StreamingGenerator:
             with tracer.start_as_current_span("generation.llm_call") as llm_span:
                 llm_span.set_attribute("pipeline_id", pipeline_id)
                 llm_span.set_attribute("run_id", str(run_id))
+                llm_span.set_attribute("model", task_type) # The router decides, so task_type is our placeholder
                 # Stream from LLM
                 async for chunk in stream_gen:
                     full_response.append(chunk)
@@ -139,6 +140,10 @@ class StreamingGenerator:
             
             input_tokens = len(self.tokenizer.encode(prompt))
             output_tokens = len(self.tokenizer.encode(final_text))
+            
+            # Approximate cost tracking based on standard GPT-3.5 turbo rates ($0.0015/1K in, $0.002/1K out)
+            approx_cost = (input_tokens / 1000 * 0.0015) + (output_tokens / 1000 * 0.002)
+            llm_cost.labels(model=task_type).observe(approx_cost)
             
             pipeline_span.set_attribute("input_tokens", input_tokens)
             pipeline_span.set_attribute("output_tokens", output_tokens)

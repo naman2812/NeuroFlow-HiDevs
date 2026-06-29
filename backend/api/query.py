@@ -14,6 +14,7 @@ from pipelines.retrieval.pipeline import RetrievalPipeline
 from pipelines.generation.generator import StreamingGenerator
 
 from backend.resilience.rate_limiter import rate_limit_endpoint, consume_pipeline_token
+from backend.monitoring.metrics import queries_total
 
 router = APIRouter(prefix="/query", tags=["query"])
 
@@ -80,6 +81,8 @@ async def submit_query(req: QueryRequest, request: Request):
             citations = batch_citations
             
     await redis_client.aclose()
+    
+    queries_total.labels(pipeline_id=str(req.pipeline_id), status="success").inc()
             
     return {
         "run_id": str(run_id),
@@ -161,10 +164,12 @@ async def stream_query(run_id: UUID, request: Request):
                             await queue.put({"type": "done", "run_id": str(run_id), "citations": batch_citations})
                             break
                             
-                    # If done without citations (empty output), send done anyway
                     if not batch_citations:
                         await queue.put({"type": "done", "run_id": str(run_id), "citations": []})
+                    
+                    queries_total.labels(pipeline_id=str(pipeline_id), status="success").inc()
                 except Exception as e:
+                    queries_total.labels(pipeline_id=str(pipeline_id), status="error").inc()
                     await queue.put({"type": "error", "message": str(e)})
                     
             worker_task = asyncio.create_task(worker())

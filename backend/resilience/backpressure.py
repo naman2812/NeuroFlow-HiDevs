@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 import redis.asyncio as aioredis
 from backend.config import settings
+from backend.monitoring.metrics import queue_depth as queue_depth_metric
 
 _redis_client = None
 
@@ -19,6 +20,7 @@ async def check_ingest_backpressure():
     
     # Track queue depth: LLEN queue:ingest in Redis
     queue_depth = await client.llen("queue:ingest")
+    queue_depth_metric.set(queue_depth)
     
     if queue_depth > 100:
         return {
