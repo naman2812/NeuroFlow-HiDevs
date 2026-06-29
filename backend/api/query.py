@@ -13,6 +13,8 @@ from backend.providers.client import NeuroFlowClient
 from pipelines.retrieval.pipeline import RetrievalPipeline
 from pipelines.generation.generator import StreamingGenerator
 
+from backend.resilience.rate_limiter import rate_limit_endpoint, consume_pipeline_token
+
 router = APIRouter(prefix="/query", tags=["query"])
 
 class QueryRequest(BaseModel):
@@ -26,7 +28,7 @@ async def get_redis():
         decode_responses=True
     )
 
-@router.post("")
+@router.post("", dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))])
 async def submit_query(req: QueryRequest, request: Request):
     pool = get_pool()
     
@@ -58,6 +60,10 @@ async def submit_query(req: QueryRequest, request: Request):
         if row:
             pipeline_config = json.loads(row["config"]) if isinstance(row["config"], str) else row["config"]
             
+    # Apply pipeline rate limit
+    rpm = pipeline_config.get("rate_limit_rpm", 60) if pipeline_config else 60
+    await consume_pipeline_token(str(req.pipeline_id), rpm)
+    
     # Retrieval
     context_data = await retrieval_pipeline.get_context(req.query, config=pipeline_config)
     
@@ -88,7 +94,7 @@ async def submit_query(req: QueryRequest, request: Request):
         ]
     }
 
-@router.get("/{run_id}/stream")
+@router.get("/{run_id}/stream", dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))])
 async def stream_query(run_id: UUID, request: Request):
     pool = get_pool()
     
@@ -138,6 +144,9 @@ async def stream_query(run_id: UUID, request: Request):
                         row = await conn.fetchrow("SELECT config FROM pipelines WHERE id = $1", pipeline_id)
                         if row:
                             pipeline_config = json.loads(row["config"]) if isinstance(row["config"], str) else row["config"]
+                            
+                    rpm = pipeline_config.get("rate_limit_rpm", 60) if pipeline_config else 60
+                    await consume_pipeline_token(str(pipeline_id), rpm)
 
                     context_data = await retrieval_pipeline.get_context(query, config=pipeline_config)
                     sources = [s.metadata.get("filename", f"doc_{s.document_id}") for s in context_data["raw_results"]]

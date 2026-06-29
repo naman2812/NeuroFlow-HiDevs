@@ -8,6 +8,10 @@ from .openai_provider import OpenAIProvider
 from .anthropic_provider import AnthropicProvider
 from .router import ModelRouter, RoutingCriteria
 
+from backend.resilience.circuit_breaker import CircuitBreaker
+from backend.resilience.rate_limiter import consume_llm_token
+from backend.resilience.timeouts import TimeoutManager
+
 tracer = trace.get_tracer(__name__)
 
 class NeuroFlowClient:
@@ -60,7 +64,14 @@ class NeuroFlowClient:
                     span.set_attribute("provider", provider_name)
                     span.set_attribute("model", model_name)
                     
-                    result = await provider.complete(messages, **kwargs)
+                    # Wait for global LLM token limit
+                    await consume_llm_token(provider_name)
+                    
+                    async with CircuitBreaker(provider_name):
+                        result = await TimeoutManager.run(
+                            "chat_completion", 
+                            provider.complete(messages, **kwargs)
+                        )
                     
                     # Decorate span with telemetry
                     span.set_attribute("input_tokens", result.input_tokens)
@@ -91,8 +102,12 @@ class NeuroFlowClient:
                     span.set_attribute("provider", provider_name)
                     span.set_attribute("model", model_name)
                     
+                    # Wait for global LLM token limit
+                    await consume_llm_token(provider_name)
+                    
                     # Test if stream initiates successfully
-                    stream_gen = provider.stream(messages, **kwargs)
+                    async with CircuitBreaker(provider_name):
+                        stream_gen = provider.stream(messages, **kwargs)
                     
                     # We can't easily fallback if the stream fails halfway through processing,
                     # but we can fallback if it fails to initiate.
@@ -118,5 +133,11 @@ class NeuroFlowClient:
             span.set_attribute("provider", "openai")
             span.set_attribute("model", "text-embedding-3-small")
             
-            embeddings = await provider.embed(texts)
+            await consume_llm_token("openai")
+            
+            async with CircuitBreaker("openai"):
+                embeddings = await TimeoutManager.run(
+                    "embedding",
+                    provider.embed(texts)
+                )
             return embeddings

@@ -52,19 +52,59 @@ FastAPIInstrumentor.instrument_app(app)
 
 @app.get("/health")
 async def health_check():
-    pg_ok = await check_postgres()
-    redis_ok = await check_redis()
-    mlflow_ok = await check_mlflow()
+    pg_res = await check_postgres()
+    redis_res = await check_redis()
+    mlflow_res = await check_mlflow()
     
-    all_ok = pg_ok and redis_ok and mlflow_ok
-    status = "ok" if all_ok else "error"
+    try:
+        import redis.asyncio as aioredis
+        from backend.config import settings
+        r = aioredis.from_url(f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}", decode_responses=True)
+        
+        cb_status = {}
+        for provider in ["openai", "anthropic"]:
+            state = await r.get(f"circuit:{provider}:state") or "closed"
+            cb = {"state": state}
+            if state == "open":
+                cb["opened_at"] = await r.get(f"circuit:{provider}:opened_at")
+            else:
+                fails = await r.get(f"circuit:{provider}:failure_count")
+                cb["failure_count"] = int(fails) if fails else 0
+            cb_status[provider] = cb
+            
+        queue_depth = await r.llen("queue:ingest")
+        # Optional: check arq queue depth as well if queue:ingest is empty
+        if queue_depth == 0:
+            queue_depth = await r.llen("arq:queue")
+            
+        workers = await r.scard("arq:workers")
+        worker_count = workers if workers else 2 # default if none
+        await r.aclose()
+    except Exception:
+        cb_status = {}
+        queue_depth = 0
+        worker_count = 0
+
+    is_critical = pg_res["status"] == "error" or redis_res["status"] == "error"
+    is_degraded = any(c["state"] == "open" for c in cb_status.values())
+    all_checks_pass = pg_res["status"] == "ok" and redis_res["status"] == "ok" and mlflow_res["status"] == "ok"
+    
+    if is_critical:
+        status = "critical"
+    elif is_degraded or not all_checks_pass:
+        status = "degraded"
+    else:
+        status = "ok"
     
     return {
         "status": status,
         "checks": {
-            "postgres": pg_ok,
-            "redis": redis_ok,
-            "mlflow": mlflow_ok
+            "postgres": pg_res,
+            "redis": redis_res,
+            "mlflow": mlflow_res,
+            "circuit_breakers": cb_status,
+            "queue_depth": queue_depth,
+            "worker_count": worker_count
         }
     }
 
