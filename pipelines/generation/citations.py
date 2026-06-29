@@ -14,13 +14,15 @@ class Citation:
     page_number: Optional[int]
     content_preview: str
 
-def parse_citations(generation: str, assembled_context_info: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_citations(generation: str, assembled_context_info: Dict[str, Any], pipeline_id: str = None, run_id: str = None) -> List[Dict[str, Any]]:
     """
     Parses [Source N] patterns from the generation and maps them back to the context.
     assembled_context_info is the output of ContextAssembler.assemble(), which includes:
     - 'sources': list of RetrievalResult
     """
     with tracer.start_as_current_span("generation.citation_parse") as span:
+        if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+        if run_id: span.set_attribute("run_id", run_id)
         parsed_citations = []
         
         # Find all unique [Source N] occurrences

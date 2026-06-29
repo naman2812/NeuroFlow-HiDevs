@@ -38,12 +38,15 @@ class RetrievalPipeline:
         
         return reranked_results[:k]
         
-    async def get_context(self, query: str, config: Dict[str, Any] = None, k: int = 10, token_budget: int = 4000, use_hyde: bool = False) -> Dict[str, Any]:
+    async def get_context(self, query: str, config: Dict[str, Any] = None, k: int = 10, token_budget: int = 4000, use_hyde: bool = False, pipeline_id: str = None, run_id: str = None) -> Dict[str, Any]:
         """
         Executes the full pipeline including context assembly.
         """
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.pipeline") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
+            
             if config and "retrieval" in config:
                 retrieval_conf = config["retrieval"]
                 k = retrieval_conf.get("top_k_after_rerank", k)
@@ -55,13 +58,13 @@ class RetrievalPipeline:
                 token_budget = config["generation"].get("max_context_tokens", token_budget)
                 
             processed_query = await self.query_processor.process_query(query)
-            retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde)
-            reranked_results = await self.reranker.rerank(query, retrieved_results, top_n=40)
+            retrieved_results = await self.retriever.retrieve(processed_query, k=max(k, 60), use_hyde=use_hyde, pipeline_id=pipeline_id, run_id=run_id)
+            reranked_results = await self.reranker.rerank(query, retrieved_results, top_n=40, pipeline_id=pipeline_id, run_id=run_id)
             
             final_results = reranked_results[:k]
             
             self.context_assembler.token_budget = token_budget
-            assembled_context = self.context_assembler.assemble(final_results)
+            assembled_context = self.context_assembler.assemble(final_results, pipeline_id=pipeline_id, run_id=run_id)
             
             span.set_attribute("final_chunks", len(final_results))
             

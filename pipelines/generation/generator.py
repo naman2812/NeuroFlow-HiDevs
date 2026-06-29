@@ -38,7 +38,7 @@ class StreamingGenerator:
             pipeline_span.set_attribute("run_id", str(run_id))
             pipeline_span.set_attribute("pipeline_id", pipeline_id)
             
-            prompt = build_prompt(query, assembled_context["context_data"], query_type)
+            prompt = build_prompt(query, assembled_context["context_data"], query_type, pipeline_id, run_id)
             
             # Log assembled prompt to DB
             async with self.db_pool.acquire() as conn:
@@ -77,6 +77,8 @@ class StreamingGenerator:
             clean_response = []
             
             with tracer.start_as_current_span("generation.llm_call") as llm_span:
+                llm_span.set_attribute("pipeline_id", pipeline_id)
+                llm_span.set_attribute("run_id", str(run_id))
                 # Stream from LLM
                 async for chunk in stream_gen:
                     full_response.append(chunk)
@@ -142,11 +144,13 @@ class StreamingGenerator:
             pipeline_span.set_attribute("output_tokens", output_tokens)
             
             # Parse citations from clean text
-            citations = parse_citations(clean_text, assembled_context)
+            citations = parse_citations(clean_text, assembled_context, pipeline_id, run_id)
             
             metadata_json = json.dumps({"think_content": think_content}) if think_content else "{}"
             
             with tracer.start_as_current_span("generation.log_run") as log_span:
+                log_span.set_attribute("pipeline_id", pipeline_id)
+                log_span.set_attribute("run_id", str(run_id))
                 # Log to DB
                 async with self.db_pool.acquire() as conn:
                     await conn.execute(

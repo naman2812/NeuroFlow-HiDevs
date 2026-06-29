@@ -2,8 +2,10 @@ from opentelemetry import trace
 
 tracer = trace.get_tracer(__name__)
 
-def build_prompt(query: str, assembled_context: str, query_type: str = "factual") -> str:
-    with tracer.start_as_current_span("generation.prompt_build"):
+def build_prompt(query: str, assembled_context: str, query_type: str = "factual", pipeline_id: str = None, run_id: str = None) -> str:
+    with tracer.start_as_current_span("generation.prompt_build") as span:
+        if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+        if run_id: span.set_attribute("run_id", run_id)
         base_prompt = (
             "You are a precise research assistant. Answer the user's question using ONLY the provided context.\n"
             "If the context does not contain enough information to answer fully, say so explicitly.\n"

@@ -14,8 +14,10 @@ class ContextAssembler:
             # Fallback
             self.encoding = tiktoken.get_encoding("cl100k_base")
             
-    def assemble(self, results: List[RetrievalResult]) -> Dict[str, Any]:
+    def assemble(self, results: List[RetrievalResult], pipeline_id: str = None, run_id: str = None) -> Dict[str, Any]:
         with tracer.start_as_current_span("retrieval.assemble") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
             context_str = ""
             current_tokens = 0
             chunks_used = []

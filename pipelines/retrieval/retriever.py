@@ -18,23 +18,28 @@ class Retriever:
         self.db_pool = db_pool
         self.client = client
         
-    async def retrieve(self, processed_query: ProcessedQuery, k: int = 20, use_hyde: bool = False) -> List[RetrievalResult]:
+    async def retrieve(self, processed_query: ProcessedQuery, k: int = 20, use_hyde: bool = False, pipeline_id: str = None, run_id: str = None) -> List[RetrievalResult]:
         # Run three strategies in parallel
         results = await asyncio.gather(
-            self._dense_retrieval(processed_query, k, use_hyde),
-            self._sparse_retrieval(processed_query, k),
-            self._metadata_retrieval(processed_query, k)
+            self._dense_retrieval(processed_query, k, use_hyde, pipeline_id, run_id),
+            self._sparse_retrieval(processed_query, k, pipeline_id, run_id),
+            self._metadata_retrieval(processed_query, k, pipeline_id, run_id)
         )
         
         # Fuse results
         with tracer.start_as_current_span("retrieval.fusion") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
+            
             fused = reciprocal_rank_fusion(list(results))
             span.set_attribute("chunk_count", len(fused))
             return fused
         
-    async def _dense_retrieval(self, processed_query: ProcessedQuery, k: int, use_hyde: bool) -> List[RetrievalResult]:
+    async def _dense_retrieval(self, processed_query: ProcessedQuery, k: int, use_hyde: bool, pipeline_id: str = None, run_id: str = None) -> List[RetrievalResult]:
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.dense") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
             if use_hyde and processed_query.hypothetical_document:
                 queries = [processed_query.hypothetical_document] + processed_query.expanded_queries
             else:
@@ -81,9 +86,11 @@ class Retriever:
             
             return sorted_results
         
-    async def _sparse_retrieval(self, processed_query: ProcessedQuery, k: int) -> List[RetrievalResult]:
+    async def _sparse_retrieval(self, processed_query: ProcessedQuery, k: int, pipeline_id: str = None, run_id: str = None) -> List[RetrievalResult]:
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.sparse") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
             queries = [processed_query.original_query] + processed_query.expanded_queries
             results_list = []
             
@@ -125,9 +132,11 @@ class Retriever:
             
             return sorted_results
             
-    async def _metadata_retrieval(self, processed_query: ProcessedQuery, k: int) -> List[RetrievalResult]:
+    async def _metadata_retrieval(self, processed_query: ProcessedQuery, k: int, pipeline_id: str = None, run_id: str = None) -> List[RetrievalResult]:
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.metadata") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
             if not processed_query.metadata_filters:
                 span.set_attribute("chunk_count", 0)
                 return []

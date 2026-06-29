@@ -14,9 +14,11 @@ class CrossEncoderReranker:
     def __init__(self, client: NeuroFlowClient):
         self.client = client
         
-    async def rerank(self, query: str, results: List[RetrievalResult], top_n: int = 40) -> List[RetrievalResult]:
+    async def rerank(self, query: str, results: List[RetrievalResult], top_n: int = 40, pipeline_id: str = None, run_id: str = None) -> List[RetrievalResult]:
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.rerank") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
             # Take top_n candidates
             candidates = results[:top_n]
             
