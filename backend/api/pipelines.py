@@ -219,7 +219,7 @@ async def get_pipeline_analytics(id: UUID = Path(...)):
 
 from backend.services.pipeline_optimizer import PipelineOptimizer
 
-@router.get("/{id}/suggestions")
+@router.post("/{id}/suggestions")
 async def get_pipeline_suggestions(id: UUID = Path(...)):
     pool = get_pool()
     optimizer = PipelineOptimizer(pool)

@@ -89,3 +89,15 @@ CREATE TABLE finetune_jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at TIMESTAMPTZ
 );
+
+-- Anomalies
+CREATE TABLE pipeline_anomalies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pipeline_id UUID NOT NULL REFERENCES pipelines(id),
+  run_id UUID REFERENCES pipeline_runs(id),
+  score FLOAT,
+  rolling_mean FLOAT,
+  rolling_stddev FLOAT,
+  suggestions JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

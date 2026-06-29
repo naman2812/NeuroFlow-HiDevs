@@ -27,13 +27,21 @@ try:
 except Exception:
     pass
 
+import asyncio
+from backend.api.evaluations import process_evaluation_queue
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await create_pool()
     await run_migrations()
+    
+    # Start background evaluation queue processor
+    task = asyncio.create_task(process_evaluation_queue())
+    
     yield
     # Shutdown
+    task.cancel()
     await close_pool()
 
 from backend.api import ingest, query, pipelines, compare, finetune, evaluations

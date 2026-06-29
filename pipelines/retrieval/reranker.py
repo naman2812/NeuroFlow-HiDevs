@@ -4,25 +4,40 @@ from backend.providers.client import NeuroFlowClient
 from backend.providers.base import ChatMessage
 from backend.providers.router import RoutingCriteria
 from .models import RetrievalResult
+from opentelemetry import trace
+import time
+from backend.monitoring.metrics import retrieval_latency
+
+tracer = trace.get_tracer(__name__)
 
 class CrossEncoderReranker:
     def __init__(self, client: NeuroFlowClient):
         self.client = client
         
-    async def rerank(self, query: str, results: List[RetrievalResult], top_n: int = 40) -> List[RetrievalResult]:
-        # Take top_n candidates
-        candidates = results[:top_n]
-        
-        # We need to rate each candidate
-        tasks = []
-        for candidate in candidates:
-            tasks.append(self._score_candidate(query, candidate))
+    async def rerank(self, query: str, results: List[RetrievalResult], top_n: int = 40, pipeline_id: str = None, run_id: str = None) -> List[RetrievalResult]:
+        start_time = time.time()
+        with tracer.start_as_current_span("retrieval.rerank") as span:
+            if pipeline_id: span.set_attribute("pipeline_id", pipeline_id)
+            if run_id: span.set_attribute("run_id", run_id)
+            # Take top_n candidates
+            candidates = results[:top_n]
             
-        scored_candidates = await asyncio.gather(*tasks)
-        
-        # Sort descending by new score
-        scored_candidates.sort(key=lambda x: x.score, reverse=True)
-        return scored_candidates
+            # We need to rate each candidate
+            tasks = []
+            for candidate in candidates:
+                tasks.append(self._score_candidate(query, candidate))
+                
+            scored_candidates = await asyncio.gather(*tasks)
+            
+            # Sort descending by new score
+            scored_candidates.sort(key=lambda x: x.score, reverse=True)
+            
+            span.set_attribute("chunk_count", len(scored_candidates))
+            
+            duration = time.time() - start_time
+            retrieval_latency.labels(strategy="rerank").observe(duration)
+            
+            return scored_candidates
         
     async def _score_candidate(self, query: str, result: RetrievalResult) -> RetrievalResult:
         prompt = f"Rate the relevance of this passage to the query on a scale of 0-10. Query: {query}. Passage: {result.content}. Return only the number."

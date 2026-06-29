@@ -14,6 +14,7 @@ from pipelines.retrieval.pipeline import RetrievalPipeline
 from pipelines.generation.generator import StreamingGenerator
 
 from backend.resilience.rate_limiter import rate_limit_endpoint, consume_pipeline_token
+from backend.monitoring.metrics import queries_total
 
 router = APIRouter(prefix="/query", tags=["query"])
 
@@ -65,7 +66,7 @@ async def submit_query(req: QueryRequest, request: Request):
     await consume_pipeline_token(str(req.pipeline_id), rpm)
     
     # Retrieval
-    context_data = await retrieval_pipeline.get_context(req.query, config=pipeline_config)
+    context_data = await retrieval_pipeline.get_context(req.query, config=pipeline_config, pipeline_id=str(req.pipeline_id), run_id=str(run_id))
     
     # Generation
     full_text = ""
@@ -80,6 +81,8 @@ async def submit_query(req: QueryRequest, request: Request):
             citations = batch_citations
             
     await redis_client.aclose()
+    
+    queries_total.labels(pipeline_id=str(req.pipeline_id), status="success").inc()
             
     return {
         "run_id": str(run_id),
@@ -148,7 +151,7 @@ async def stream_query(run_id: UUID, request: Request):
                     rpm = pipeline_config.get("rate_limit_rpm", 60) if pipeline_config else 60
                     await consume_pipeline_token(str(pipeline_id), rpm)
 
-                    context_data = await retrieval_pipeline.get_context(query, config=pipeline_config)
+                    context_data = await retrieval_pipeline.get_context(query, config=pipeline_config, pipeline_id=str(pipeline_id), run_id=str(run_id))
                     sources = [s.metadata.get("filename", f"doc_{s.document_id}") for s in context_data["raw_results"]]
                     
                     await queue.put({"type": "retrieval_complete", "chunk_count": len(sources), "sources": list(set(sources))})
@@ -161,10 +164,12 @@ async def stream_query(run_id: UUID, request: Request):
                             await queue.put({"type": "done", "run_id": str(run_id), "citations": batch_citations})
                             break
                             
-                    # If done without citations (empty output), send done anyway
                     if not batch_citations:
                         await queue.put({"type": "done", "run_id": str(run_id), "citations": []})
+                    
+                    queries_total.labels(pipeline_id=str(pipeline_id), status="success").inc()
                 except Exception as e:
+                    queries_total.labels(pipeline_id=str(pipeline_id), status="error").inc()
                     await queue.put({"type": "error", "message": str(e)})
                     
             worker_task = asyncio.create_task(worker())

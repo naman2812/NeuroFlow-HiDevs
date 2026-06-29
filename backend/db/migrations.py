@@ -31,5 +31,19 @@ async def run_migrations():
             
             print("Applying ALTER TABLE for evaluations metadata column")
             await conn.execute("ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';")
+            
+            print("Applying CREATE TABLE for pipeline_anomalies")
+            await conn.execute("""
+            CREATE TABLE IF NOT EXISTS pipeline_anomalies (
+              id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+              pipeline_id UUID NOT NULL REFERENCES pipelines(id),
+              run_id UUID REFERENCES pipeline_runs(id),
+              score FLOAT,
+              rolling_mean FLOAT,
+              rolling_stddev FLOAT,
+              suggestions JSONB,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            """)
         except Exception as e:
             print(f"Migration error: {e}")
