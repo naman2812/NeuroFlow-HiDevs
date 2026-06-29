@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     await close_pool()
 
-from backend.api import ingest, query, pipelines, compare, finetune
+from backend.api import ingest, query, pipelines, compare, finetune, evaluations
 from backend.api.runs import router as runs_router
 
 app = FastAPI(title="NeuroFlow API", lifespan=lifespan)
@@ -46,6 +46,7 @@ app.include_router(runs_router)
 app.include_router(pipelines.router)
 app.include_router(compare.router)
 app.include_router(finetune.router)
+app.include_router(evaluations.router)
 
 # Instrument the app
 FastAPIInstrumentor.instrument_app(app)
