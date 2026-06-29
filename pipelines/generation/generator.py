@@ -163,7 +163,16 @@ class StreamingGenerator:
                     )
                 
             # Enqueue evaluation job (Task 37) asynchronously
-            asyncio.create_task(self.redis.rpush("evaluation_queue", str(run_id)))
+            from opentelemetry.propagate import inject
+            carrier = {}
+            inject(carrier)
+            payload = json.dumps({
+                "run_id": str(run_id),
+                "pipeline_id": pipeline_id,
+                "query": query,
+                "trace_context": carrier
+            })
+            asyncio.create_task(self.redis.rpush("evaluation_queue", payload))
             
             # Final yield to send citations
             yield ("", citations)

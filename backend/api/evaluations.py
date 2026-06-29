@@ -5,6 +5,7 @@ from sse_starlette.sse import EventSourceResponse
 from backend.config import settings
 import redis.asyncio as aioredis
 from opentelemetry import trace
+from opentelemetry.propagate import extract
 from backend.monitoring.metrics import eval_faithfulness, eval_overall
 
 tracer = trace.get_tracer(__name__)
@@ -105,3 +106,84 @@ async def simulate_eval(req: SimulateEval):
         await r.aclose()
         
         return {"status": "simulated", "eval": eval_dict}
+
+async def process_evaluation_queue():
+    import random
+    r = aioredis.from_url(
+        f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+        decode_responses=True
+    )
+    
+    while True:
+        try:
+            item = await r.blpop("evaluation_queue", timeout=5)
+            if not item:
+                continue
+                
+            _, payload_str = item
+            try:
+                # Support old format (just string run_id) or new format (JSON dict)
+                payload = json.loads(payload_str)
+                run_id = payload["run_id"]
+                pipeline_id = payload.get("pipeline_id", "unknown")
+                query = payload.get("query", "unknown")
+                trace_context = payload.get("trace_context", {})
+            except json.JSONDecodeError:
+                run_id = payload_str
+                pipeline_id = "unknown"
+                query = "unknown"
+                trace_context = {}
+                
+            # Extract parent trace context
+            context = extract(trace_context)
+            
+            with tracer.start_as_current_span("evaluation.judge", context=context) as judge_span:
+                judge_span.set_attribute("pipeline_id", pipeline_id)
+                judge_span.set_attribute("run_id", run_id)
+                
+                with tracer.start_as_current_span("evaluation.faithfulness") as f_span:
+                    faithfulness = random.uniform(0.6, 1.0)
+                    f_span.set_attribute("score", faithfulness)
+                    
+                with tracer.start_as_current_span("evaluation.answer_relevance") as ar_span:
+                    answer_relevance = random.uniform(0.5, 0.95)
+                    ar_span.set_attribute("score", answer_relevance)
+                    
+                with tracer.start_as_current_span("evaluation.context_precision") as cp_span:
+                    context_precision = random.uniform(0.7, 1.0)
+                    cp_span.set_attribute("score", context_precision)
+                    
+                with tracer.start_as_current_span("evaluation.context_recall") as cr_span:
+                    context_recall = random.uniform(0.4, 0.9)
+                    cr_span.set_attribute("score", context_recall)
+                    
+                overall_score = random.uniform(0.6, 0.95)
+                judge_span.set_attribute("overall_score", overall_score)
+                
+                eval_dict = {
+                    "id": str(uuid.uuid4()),
+                    "run_id": run_id,
+                    "pipeline_name": pipeline_id,
+                    "query": query,
+                    "faithfulness": faithfulness,
+                    "answer_relevance": answer_relevance,
+                    "context_precision": context_precision,
+                    "context_recall": context_recall,
+                    "overall_score": overall_score,
+                    "evaluated_at": datetime.utcnow().isoformat() + "Z",
+                    "retrieved_chunks": [],
+                    "generated_answer": ""
+                }
+                
+                eval_faithfulness.labels(pipeline_id=pipeline_id).set(faithfulness)
+                eval_overall.labels(pipeline_id=pipeline_id).set(overall_score)
+                
+                await r.publish("evaluations:new", json.dumps(eval_dict))
+                
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error processing evaluation queue: {e}")
+            await asyncio.sleep(1)
+            
+    await r.aclose()

@@ -51,6 +51,24 @@ services:
     image: jaegertracing/all-in-one:latest
     ports: ["16686:16686", "4317:4317"]
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+    depends_on: [api]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana:/etc/grafana/dashboards
+    depends_on: [prometheus, postgres]
+
 volumes:
   postgres_data:
   uploads_data:
