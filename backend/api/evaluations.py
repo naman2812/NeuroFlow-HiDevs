@@ -180,6 +180,57 @@ async def process_evaluation_queue():
                 
                 await r.publish("evaluations:new", json.dumps(eval_dict))
                 
+                # Persist to DB and check for anomalies
+                if pipeline_id != "unknown":
+                    try:
+                        from backend.db.pool import get_pool
+                        pool = get_pool()
+                        async with pool.acquire() as conn:
+                            # 1. Insert evaluation
+                            await conn.execute(
+                                """
+                                INSERT INTO evaluations (run_id, faithfulness, answer_relevance, context_precision, context_recall, overall_score)
+                                VALUES ($1, $2, $3, $4, $5, $6)
+                                """,
+                                uuid.UUID(run_id), faithfulness, answer_relevance, context_precision, context_recall, overall_score
+                            )
+                            
+                            # 2. Get rolling mean and stddev
+                            stats = await conn.fetchrow(
+                                """
+                                SELECT 
+                                  AVG(e.overall_score) as mean_score, 
+                                  STDDEV(e.overall_score) as stddev_score
+                                FROM evaluations e
+                                JOIN pipeline_runs pr ON e.run_id = pr.id
+                                WHERE pr.pipeline_id = $1 
+                                AND e.evaluated_at >= NOW() - INTERVAL '7 days'
+                                """,
+                                uuid.UUID(pipeline_id)
+                            )
+                            
+                            if stats and stats["mean_score"] is not None and stats["stddev_score"] is not None:
+                                mean_score = float(stats["mean_score"])
+                                stddev_score = float(stats["stddev_score"])
+                                
+                                # 3. Trigger anomaly detection
+                                if overall_score < (mean_score - 2 * stddev_score):
+                                    from backend.services.pipeline_optimizer import PipelineOptimizer
+                                    optimizer = PipelineOptimizer(pool)
+                                    suggestions = await optimizer.get_suggestions(uuid.UUID(pipeline_id))
+                                    
+                                    # 4. Insert anomaly
+                                    await conn.execute(
+                                        """
+                                        INSERT INTO pipeline_anomalies (pipeline_id, run_id, score, rolling_mean, rolling_stddev, suggestions)
+                                        VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+                                        """,
+                                        uuid.UUID(pipeline_id), uuid.UUID(run_id), overall_score, mean_score, stddev_score, json.dumps(suggestions)
+                                    )
+                                    
+                    except Exception as db_err:
+                        print(f"Error checking anomalies: {db_err}")
+                
         except asyncio.CancelledError:
             break
         except Exception as e:

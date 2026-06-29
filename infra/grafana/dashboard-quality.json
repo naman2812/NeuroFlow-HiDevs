@@ -2,6 +2,26 @@
   "title": "Quality Monitor",
   "tags": ["neuroflow", "quality", "evaluation"],
   "timezone": "browser",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": "PostgreSQL",
+        "enable": true,
+        "iconColor": "red",
+        "name": "Anomalies & Suggestions",
+        "rawQuery": "SELECT EXTRACT(epoch FROM created_at)*1000 as time, 'Anomaly Detected! Score: ' || ROUND(score::numeric, 2) || ' (Mean: ' || ROUND(rolling_mean::numeric, 2) || '). Suggestions: ' || suggestions::text as text, 'anomaly' as tags FROM pipeline_anomalies"
+      }
+    ]
+  },
   "panels": [
     {
       "title": "Overall Score Trend (7-day)",
