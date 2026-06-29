@@ -215,9 +215,13 @@ async def process_evaluation_queue():
                                 
                                 # 3. Trigger anomaly detection
                                 if overall_score < (mean_score - 2 * stddev_score):
-                                    from backend.services.pipeline_optimizer import PipelineOptimizer
-                                    optimizer = PipelineOptimizer(pool)
-                                    suggestions = await optimizer.get_suggestions(uuid.UUID(pipeline_id))
+                                    import httpx
+                                    async with httpx.AsyncClient() as client:
+                                        # Use HTTP POST as requested
+                                        url = f"http://localhost:8000/pipelines/{pipeline_id}/suggestions"
+                                        resp = await client.post(url)
+                                        suggestions_data = resp.json()
+                                        suggestions = suggestions_data.get("suggestions", [])
                                     
                                     # 4. Insert anomaly
                                     await conn.execute(
