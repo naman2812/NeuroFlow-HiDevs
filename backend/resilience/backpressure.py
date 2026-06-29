@@ -1,0 +1,38 @@
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
+import redis.asyncio as aioredis
+from backend.config import settings
+
+_redis_client = None
+
+def get_redis_client():
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = aioredis.from_url(
+            f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+            decode_responses=True
+        )
+    return _redis_client
+
+async def check_ingest_backpressure():
+    client = get_redis_client()
+    
+    # Track queue depth: LLEN queue:ingest in Redis
+    queue_depth = await client.llen("queue:ingest")
+    
+    if queue_depth > 100:
+        return {
+            "status_code": 503,
+            "error": "ingestion_queue_full",
+            "queue_depth": queue_depth,
+            "retry_after": 30
+        }
+        
+    if queue_depth > 50:
+        return {
+            "status_code": 202,
+            "warning": "high_queue_depth",
+            "estimated_wait_minutes": queue_depth // 2
+        }
+        
+    return None
