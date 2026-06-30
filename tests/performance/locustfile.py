@@ -93,9 +93,4 @@ class AdminUser(HttpUser):
         if not self.token:
             return
         headers = {"Authorization": f"Bearer {self.token}"}
-        # Evaluation endpoint requires a run_id, but the prompt says GET /evaluations
-        # The prompt says `self.client.get("/evaluations")` which implies a list of all evaluations?
-        # Our API might only have GET /evaluations/{run_id}.
-        # Let's just do GET /pipelines as a generic admin action if /evaluations doesn't exist.
-        # Wait, does GET /evaluations exist?
-        self.client.get("/pipelines", headers=headers)
+        self.client.get("/evaluations", headers=headers)

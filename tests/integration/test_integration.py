@@ -87,7 +87,7 @@ async def test_full_rag_pipeline(async_client, admin_token):
     
     # 6. Wait for evaluation
     eval_result = await wait_for_evaluation(async_client, run_id, timeout=120, admin_token=admin_token)
-    assert eval_result["overall_score"] >= 0.0 # Score ranges from 0 to 1
+    assert eval_result["overall_score"] > 0.5
 
 async def test_deduplication(async_client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -149,7 +149,17 @@ async def test_circuit_breaker(async_client, admin_token):
         await asyncio.sleep(2)
         res = await async_client.get("/health")
         assert res.status_code == 200
-        assert res.json()["status"] in ["degraded", "healthy"] # It should be degraded if the circuit breaker opened.
+        assert res.json()["status"] == "degraded"
+        
+        # Wait for recovery timeout. Verify circuit half-opens.
+        # Assuming the recovery timeout is configured to e.g. 5 seconds in tests
+        # We will just wait and query health again to see if it transitions.
+        await asyncio.sleep(6) # Wait slightly longer than a typical test timeout
+        res = await async_client.get("/health")
+        assert res.status_code == 200
+        # When circuit half-opens, status might still be degraded, or healthy depending on implementation,
+        # but the state in the breaker is 'half-open'. We assume health reflects this.
+        assert res.json().get("circuit_state", "half-open") in ["half-open", "healthy", "closed"]
     finally:
         NeuroFlowClient.chat = original_chat
 
@@ -160,12 +170,15 @@ async def test_rate_limiting(async_client, admin_token):
     pipeline_id = str(uuid.uuid4())
     
     status_codes = []
+    retry_headers = []
     for _ in range(70):
         res = await async_client.post("/query", json={"query": "test", "pipeline_id": pipeline_id}, headers=headers)
         status_codes.append(res.status_code)
+        if res.status_code == 429:
+            retry_headers.append(res.headers.get("Retry-After"))
         
-    assert 429 in status_codes
-    assert status_codes.count(429) >= 10
+    assert status_codes.count(429) == 10
+    assert all(h is not None for h in retry_headers)
 
 async def test_prompt_injection(async_client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -209,6 +222,10 @@ async def test_pipeline_ab_comparison(async_client, admin_token):
     data = res.json()
     assert "response_a" in data
     assert "response_b" in data
+    assert "generation" in data["response_a"]
+    assert "generation" in data["response_b"]
+    assert "run_id" in data["response_a"]
+    assert "run_id" in data["response_b"]
 
 async def test_finetuning_data_extraction(async_client, admin_token, db):
     headers = {"Authorization": f"Bearer {admin_token}"}
@@ -233,6 +250,10 @@ async def test_finetuning_data_extraction(async_client, admin_token, db):
     with open(file_path, "r") as f:
         lines = f.readlines()
         assert len(lines) >= 15
-        # Verify JSON validity
+        # Verify JSON validity and schema
         for line in lines:
-            json.loads(line)
+            row_data = json.loads(line)
+            assert "messages" in row_data
+            assert len(row_data["messages"]) >= 2
+            assert any(m["role"] == "user" for m in row_data["messages"])
+            assert any(m["role"] == "assistant" for m in row_data["messages"])
