@@ -17,6 +17,7 @@ import socket
 import ipaddress
 from urllib.parse import urlparse
 from backend.security.auth import RequireScope
+from backend.security.prompt_injection import sanitize_text
 
 router = APIRouter()
 
@@ -98,7 +99,7 @@ async def ingest_document(
             raise HTTPException(400, "MIME type mismatch for PDF")
             
         content_hash = hashlib.sha256(file_bytes).hexdigest()
-        filename = file.filename
+        filename = sanitize_text(file.filename)
         
     else:
         # Check if json body was passed
@@ -109,6 +110,7 @@ async def ingest_document(
             pass
             
         if url:
+            url = sanitize_text(url)
             if not is_safe_url(url):
                 raise HTTPException(400, "Invalid or prohibited URL (SSRF protection)")
             source_type = "url"
