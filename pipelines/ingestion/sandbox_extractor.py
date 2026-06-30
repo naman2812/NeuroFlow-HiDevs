@@ -3,12 +3,13 @@ import json
 import asyncio
 
 def run():
-    if len(sys.argv) < 3:
-        print("Usage: python -m pipelines.ingestion.sandbox_extractor <file_path> <source_type>")
+    if len(sys.argv) < 4:
+        print("Usage: python -m pipelines.ingestion.sandbox_extractor <file_path> <source_type> <output_path>")
         sys.exit(1)
         
     file_path = sys.argv[1]
     source_type = sys.argv[2]
+    output_path = sys.argv[3]
     
     pages = []
     try:
@@ -38,9 +39,11 @@ def run():
                 "metadata": p.metadata
             })
             
-        print(json.dumps(output))
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(output, f)
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump({"error": str(e)}, f)
         sys.exit(1)
 
 if __name__ == "__main__":

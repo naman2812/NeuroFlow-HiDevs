@@ -35,19 +35,33 @@ async def process_document_pipeline(
                     try:
                         docker_client = docker.from_env()
                         
+                        output_path = f"{file_path}_output.json"
+                        
                         # In docker-compose.yml we explicitly map the volume name neuroflow_uploads_data to /app/uploads
-                        container = docker_client.containers.run(
-                            image="neuroflow-backend:latest",
-                            command=["python", "-m", "pipelines.ingestion.sandbox_extractor", file_path, source_type],
-                            network_mode="none",
-                            mem_limit="256m",
-                            volumes={"neuroflow_uploads_data": {"bind": "/app/uploads", "mode": "ro"}},
-                            remove=True,
-                            stdout=True,
-                            stderr=False
-                        )
-                        output_str = container.decode('utf-8')
-                        output_data = json.loads(output_str)
+                        try:
+                            docker_client.containers.run(
+                                image="neuroflow-backend:latest",
+                                command=["python", "-m", "pipelines.ingestion.sandbox_extractor", file_path, source_type, output_path],
+                                network_mode="none",
+                                mem_limit="256m",
+                                volumes={"neuroflow_uploads_data": {"bind": "/app/uploads", "mode": "rw"}},
+                                remove=True,
+                                stdout=True,
+                                stderr=True
+                            )
+                        except Exception as docker_e:
+                            # The sandbox container might have failed to run entirely or exited 1
+                            logger.error(f"Sandbox container error: {docker_e}")
+                            
+                        # Read output
+                        if not os.path.exists(output_path):
+                            raise Exception("Sandbox failed to produce an output file. It may have crashed.")
+                            
+                        with open(output_path, "r", encoding="utf-8") as f:
+                            output_data = json.load(f)
+                            
+                        os.remove(output_path)
+                        
                         if isinstance(output_data, dict) and "error" in output_data:
                             raise Exception(f"Sandbox extraction error: {output_data['error']}")
                             
