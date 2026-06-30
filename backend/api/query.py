@@ -60,7 +60,6 @@ async def submit_query(req: QueryRequest, request: Request, user=Depends(Require
     async with pool.acquire() as conn:
         run_id = await conn.fetchval(
             """
-            """
             INSERT INTO pipeline_runs (pipeline_id, query, status, metadata)
             VALUES ($1, $2, 'pending', $3::jsonb)
             RETURNING id
