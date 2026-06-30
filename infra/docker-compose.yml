@@ -28,6 +28,7 @@ services:
     depends_on: [postgres]
 
   api:
+    image: neuroflow-backend:latest
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -36,8 +37,10 @@ services:
     env_file: ../.env
     volumes:
       - uploads_data:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock
 
   worker:
+    image: neuroflow-backend:latest
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -46,6 +49,7 @@ services:
     env_file: ../.env
     volumes:
       - uploads_data:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -72,3 +76,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+    name: neuroflow_uploads_data

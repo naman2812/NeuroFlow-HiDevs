@@ -5,12 +5,17 @@ import json
 
 from backend.db.pool import get_pool
 from backend.models.pipeline import PipelineConfig, PipelineCreate, PipelineUpdate, PipelineResponse, PipelineRunResponse
+from backend.security.prompt_injection import sanitize_text
+from backend.security.auth import RequireScope
+from fastapi import Depends
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
 @router.post("", response_model=PipelineResponse)
-async def create_pipeline(data: PipelineCreate):
+async def create_pipeline(data: PipelineCreate, user=Depends(RequireScope("admin"))):
     pool = get_pool()
+    data.config.name = sanitize_text(data.config.name)
+    data.config.description = sanitize_text(data.config.description)
     config_json = data.config.model_dump_json()
     name = data.config.name
     
@@ -95,8 +100,10 @@ async def get_pipeline(id: UUID = Path(...)):
         return res
 
 @router.patch("/{id}")
-async def update_pipeline(data: PipelineUpdate, id: UUID = Path(...)):
+async def update_pipeline(data: PipelineUpdate, id: UUID = Path(...), user=Depends(RequireScope("admin"))):
     pool = get_pool()
+    data.config.name = sanitize_text(data.config.name)
+    data.config.description = sanitize_text(data.config.description)
     config_json = data.config.model_dump_json()
     
     async with pool.acquire() as conn:
@@ -129,7 +136,7 @@ async def update_pipeline(data: PipelineUpdate, id: UUID = Path(...)):
     return PipelineResponse(**res_dict)
 
 @router.delete("/{id}")
-async def delete_pipeline(id: UUID = Path(...)):
+async def delete_pipeline(id: UUID = Path(...), user=Depends(RequireScope("admin"))):
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(

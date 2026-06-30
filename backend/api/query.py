@@ -2,8 +2,12 @@ import asyncio
 import json
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+from fastapi.responses import JSONResponse
+
+from backend.security.prompt_injection import sanitize_text, scan_for_prompt_injection, classify_prompt_injection
+from backend.security.auth import RequireScope
 
 from backend.db.pool import get_pool
 import redis.asyncio as aioredis
@@ -19,7 +23,7 @@ from backend.monitoring.metrics import queries_total
 router = APIRouter(prefix="/query", tags=["query"])
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(..., max_length=5000)
     pipeline_id: UUID
     stream: bool = False
 
@@ -30,27 +34,44 @@ async def get_redis():
     )
 
 @router.post("", dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))])
-async def submit_query(req: QueryRequest, request: Request):
+async def submit_query(req: QueryRequest, request: Request, user=Depends(RequireScope("query"))):
     pool = get_pool()
+    req.query = sanitize_text(req.query)
+    
+    redis_client = await get_redis()
+    client = NeuroFlowClient(redis_client)
+    
+    # Layer 1 Prompt Injection
+    injection_metadata = {}
+    l1_result = scan_for_prompt_injection(req.query)
+    if l1_result:
+        import logging
+        logging.warning(f"Prompt injection pattern detected: {l1_result['pattern']}")
+        injection_metadata = l1_result
+        
+    # Layer 2 Prompt Injection (LLM Classification)
+    is_injection = await classify_prompt_injection(req.query, client)
+    if is_injection:
+        await redis_client.aclose()
+        return JSONResponse(status_code=400, content={"error": "query_rejected", "reason": "potential_prompt_injection"})
+    
     
     # Create the run in DB
     async with pool.acquire() as conn:
         run_id = await conn.fetchval(
             """
-            INSERT INTO pipeline_runs (pipeline_id, query, status)
-            VALUES ($1, $2, 'pending')
+            """
+            INSERT INTO pipeline_runs (pipeline_id, query, status, metadata)
+            VALUES ($1, $2, 'pending', $3::jsonb)
             RETURNING id
             """,
-            req.pipeline_id, req.query
+            req.pipeline_id, req.query, json.dumps(injection_metadata)
         )
         
     if req.stream:
         return {"run_id": str(run_id)}
         
     # If not streaming, do it synchronously
-    redis_client = await get_redis()
-    client = NeuroFlowClient(redis_client)
-    
     retrieval_pipeline = RetrievalPipeline(pool, client)
     generator = StreamingGenerator(client, pool, redis_client)
     
@@ -98,7 +119,7 @@ async def submit_query(req: QueryRequest, request: Request):
     }
 
 @router.get("/{run_id}/stream", dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))])
-async def stream_query(run_id: UUID, request: Request):
+async def stream_query(run_id: UUID, request: Request, user=Depends(RequireScope("query"))):
     pool = get_pool()
     
     # Verify run exists and is pending

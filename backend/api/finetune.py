@@ -10,6 +10,9 @@ from backend.config import settings
 from pydantic import BaseModel
 import redis.asyncio as aioredis
 
+from backend.security.auth import RequireScope
+from backend.security.prompt_injection import sanitize_text
+
 router = APIRouter(prefix="/finetune", tags=["finetune"])
 
 class FineTuneRequest(BaseModel):
@@ -27,8 +30,10 @@ async def get_redis():
         await client.aclose()
 
 @router.post("/jobs")
-async def create_finetune_job(req: FineTuneRequest, db_pool=Depends(get_pool), redis_client=Depends(get_redis)):
+async def create_finetune_job(req: FineTuneRequest, db_pool=Depends(get_pool), redis_client=Depends(get_redis), user=Depends(RequireScope("admin"))):
     job_id = uuid4()
+    req.base_model = sanitize_text(req.base_model)
+    req.format = sanitize_text(req.format)
     
     if req.format not in ["sft", "dpo"]:
         raise HTTPException(status_code=400, detail="format must be 'sft' or 'dpo'")
@@ -66,13 +71,13 @@ async def create_finetune_job(req: FineTuneRequest, db_pool=Depends(get_pool), r
     return {"job_id": job_id, "provider_job_id": provider_job_id, "status": "pending"}
 
 @router.get("/jobs")
-async def list_finetune_jobs(db_pool=Depends(get_pool)):
+async def list_finetune_jobs(db_pool=Depends(get_pool), user=Depends(RequireScope("admin"))):
     async with db_pool.acquire() as conn:
         records = await conn.fetch("SELECT id, provider_job_id, base_model, status, created_at, completed_at FROM finetune_jobs ORDER BY created_at DESC")
     return [dict(r) for r in records]
 
 @router.get("/jobs/{job_id}")
-async def get_finetune_job(job_id: UUID, db_pool=Depends(get_pool)):
+async def get_finetune_job(job_id: UUID, db_pool=Depends(get_pool), user=Depends(RequireScope("admin"))):
     async with db_pool.acquire() as conn:
         record = await conn.fetchrow("SELECT * FROM finetune_jobs WHERE id = $1", job_id)
     if not record:
@@ -83,7 +88,8 @@ async def get_finetune_job(job_id: UUID, db_pool=Depends(get_pool)):
     return job_data
 
 @router.get("/training-data/preview")
-async def preview_training_data(format: str = "sft", db_pool=Depends(get_pool), redis_client=Depends(get_redis)):
+async def preview_training_data(format: str = "sft", db_pool=Depends(get_pool), redis_client=Depends(get_redis), user=Depends(RequireScope("admin"))):
+    format = sanitize_text(format)
     if format not in ["sft", "dpo"]:
         raise HTTPException(status_code=400, detail="format must be 'sft' or 'dpo'")
         
