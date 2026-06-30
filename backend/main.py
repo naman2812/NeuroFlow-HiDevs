@@ -44,17 +44,26 @@ async def lifespan(app: FastAPI):
     task.cancel()
     await close_pool()
 
-from backend.api import ingest, query, pipelines, compare, finetune, evaluations
+from backend.api import ingest, query, pipelines, compare, finetune, evaluations, auth
 from backend.api.runs import router as runs_router
+from backend.security.auth import get_current_user
+from backend.security.middleware import SecurityHeadersMiddleware
+from fastapi import Depends
 
 app = FastAPI(title="NeuroFlow API", lifespan=lifespan)
-app.include_router(ingest.router)
-app.include_router(query.router)
-app.include_router(runs_router)
-app.include_router(pipelines.router)
-app.include_router(compare.router)
-app.include_router(finetune.router)
-app.include_router(evaluations.router)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Auth router doesn't require authentication for /token
+app.include_router(auth.router)
+
+# All other routers require JWT auth
+app.include_router(ingest.router, dependencies=[Depends(get_current_user)])
+app.include_router(query.router, dependencies=[Depends(get_current_user)])
+app.include_router(runs_router, dependencies=[Depends(get_current_user)])
+app.include_router(pipelines.router, dependencies=[Depends(get_current_user)])
+app.include_router(compare.router, dependencies=[Depends(get_current_user)])
+app.include_router(finetune.router, dependencies=[Depends(get_current_user)])
+app.include_router(evaluations.router, dependencies=[Depends(get_current_user)])
 
 # Instrument the app
 FastAPIInstrumentor.instrument_app(app)

@@ -8,6 +8,8 @@ from .extractors import ExtractedPage
 from .chunker import Chunker
 from backend.providers.client import NeuroFlowClient
 from backend.monitoring.metrics import ingestion_docs_total
+from backend.security.prompt_injection import scan_for_prompt_injection
+from backend.security.secrets_scanner import scan_and_redact_secrets
 
 tracer = trace.get_tracer(__name__)
 logger = logging.getLogger(__name__)
@@ -52,6 +54,24 @@ async def process_document_pipeline(
                 chunk_span.set_attribute("chunk_count", len(chunks))
                 span.set_attribute("chunk_count", len(chunks))
             
+            # 2.5 Security Scanning
+            with tracer.start_as_current_span("ingestion.security_scan"):
+                for chunk in chunks:
+                    # Secret Detection
+                    redacted_text, events = scan_and_redact_secrets(chunk.content, document_id)
+                    chunk.content = redacted_text
+                    if events:
+                        for event in events:
+                            logger.info(json.dumps(event))
+                        chunk.metadata["secrets_redacted"] = len(events)
+                        
+                    # Prompt Injection
+                    inj_result = scan_for_prompt_injection(chunk.content)
+                    if inj_result:
+                        logger.warning(f"Prompt injection pattern detected in document {document_id}: {inj_result['pattern']}")
+                        chunk.metadata["prompt_injection_detected"] = True
+                        chunk.metadata["injection_pattern"] = inj_result['pattern']
+
             # 3. Embed chunks
             with tracer.start_as_current_span("ingestion.embed") as embed_span:
                 texts = [c.content for c in chunks]

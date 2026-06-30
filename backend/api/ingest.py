@@ -12,8 +12,30 @@ from fastapi.responses import JSONResponse
 
 from backend.resilience.rate_limiter import rate_limit_endpoint
 from backend.resilience.backpressure import check_ingest_backpressure
+import magic
+import socket
+import ipaddress
+from urllib.parse import urlparse
+from backend.security.auth import RequireScope
 
 router = APIRouter()
+
+def is_safe_url(url: str) -> bool:
+    import re
+    if not re.match(r"^https?://", url):
+        return False
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    if not hostname or hostname in ["localhost", "127.0.0.1", "::1"]:
+        return False
+    try:
+        ip = socket.gethostbyname(hostname)
+        ip_obj = ipaddress.ip_address(ip)
+        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+            return False
+    except socket.gaierror:
+        pass
+    return True
 
 class URLIngestRequest(BaseModel):
     url: str
@@ -33,7 +55,8 @@ async def ingest_document(
     request: Request,
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None),
-    redis = Depends(get_redis_pool)
+    redis = Depends(get_redis_pool),
+    user = Depends(RequireScope("ingest"))
 ):
     # Check Backpressure
     bp_warning = await check_ingest_backpressure()
@@ -65,6 +88,15 @@ async def ingest_document(
         if len(file_bytes) > 100 * 1024 * 1024:
             raise HTTPException(400, "File too large (max 100MB)")
             
+        # Magic bytes check
+        mime = magic.from_buffer(file_bytes, mime=True)
+        if mime in ["application/x-dosexec", "application/x-executable", "application/x-msdownload", "application/x-sh"]:
+            raise HTTPException(400, "Executable files are strictly prohibited")
+        
+        # Simple cross-check (MIME vs Ext)
+        if ext == "pdf" and mime != "application/pdf":
+            raise HTTPException(400, "MIME type mismatch for PDF")
+            
         content_hash = hashlib.sha256(file_bytes).hexdigest()
         filename = file.filename
         
@@ -77,6 +109,8 @@ async def ingest_document(
             pass
             
         if url:
+            if not is_safe_url(url):
+                raise HTTPException(400, "Invalid or prohibited URL (SSRF protection)")
             source_type = "url"
             content_hash = hashlib.sha256(url.encode()).hexdigest()
             filename = url

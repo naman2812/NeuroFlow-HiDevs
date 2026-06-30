@@ -35,9 +35,11 @@ class EvaluationConfig(BaseModel):
     auto_evaluate: bool
     training_threshold: float
 
+from pydantic import BaseModel, ConfigDict, Field
+
 class PipelineConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    name: str
+    name: str = Field(..., max_length=100)
     description: str
     ingestion: IngestionConfig
     retrieval: RetrievalConfig
