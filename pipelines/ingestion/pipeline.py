@@ -10,6 +10,8 @@ from backend.providers.client import NeuroFlowClient
 from backend.monitoring.metrics import ingestion_docs_total
 from backend.security.prompt_injection import scan_for_prompt_injection
 from backend.security.secrets_scanner import scan_and_redact_secrets
+import docker
+import os
 
 tracer = trace.get_tracer(__name__)
 logger = logging.getLogger(__name__)
@@ -28,21 +30,40 @@ async def process_document_pipeline(
         try:
             # 1. Extraction
             with tracer.start_as_current_span(f"ingestion.extract.{source_type}") as extract_span:
-                if source_type == "pdf":
-                    pages = extract_pdf(file_path)
-                elif source_type == "docx":
-                    pages = extract_docx(file_path)
+                # Local documents go to the sandbox to prevent malicious execution
+                if source_type in ["pdf", "docx", "csv", "text", "txt"]:
+                    try:
+                        docker_client = docker.from_env()
+                        
+                        # In docker-compose.yml we explicitly map the volume name neuroflow_uploads_data to /app/uploads
+                        container = docker_client.containers.run(
+                            image="neuroflow-backend:latest",
+                            command=["python", "-m", "pipelines.ingestion.sandbox_extractor", file_path, source_type],
+                            network_mode="none",
+                            mem_limit="256m",
+                            volumes={"neuroflow_uploads_data": {"bind": "/app/uploads", "mode": "ro"}},
+                            remove=True,
+                            stdout=True,
+                            stderr=False
+                        )
+                        output_str = container.decode('utf-8')
+                        output_data = json.loads(output_str)
+                        if isinstance(output_data, dict) and "error" in output_data:
+                            raise Exception(f"Sandbox extraction error: {output_data['error']}")
+                            
+                        pages = [ExtractedPage(**p) for p in output_data]
+                    except Exception as e:
+                        logger.error(f"Sandbox extraction failed for {document_id}: {e}")
+                        raise e
+                # Network dependent extractions happen natively (but carefully)
                 elif source_type in ["image", "jpeg", "png", "webp", "jpg"]:
                     pages = await extract_image(file_path, client)
-                elif source_type == "csv":
-                    pages = extract_csv(file_path)
                 elif source_type == "url":
-                    pages = await extract_url(file_path)  # file_path is actually the URL
+                    pages = await extract_url(file_path)
                 elif source_type == "pptx":
                     pages = await extract_pptx(file_path, client)
                 else:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        pages = [ExtractedPage(page_number=1, content=f.read(), content_type="text", metadata={})]
+                    raise Exception(f"Unsupported source type: {source_type}")
                 
                 extract_span.set_attribute("page_count", len(pages))
                 span.set_attribute("page_count", len(pages))
