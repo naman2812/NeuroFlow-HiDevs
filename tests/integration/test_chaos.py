@@ -42,18 +42,36 @@ async def test_redis_chaos_degrades_gracefully():
             pytest.skip(f"{REDIS_CONTAINER} is not running")
         
         try:
-            # 2. Kill Redis
+            # 2. Start spamming queries to simulate mid-test activity
+            import asyncio
+            async def spam_queries():
+                errors = 0
+                for _ in range(20):
+                    try:
+                        await client.post("/query", json={"query": "hello", "pipeline_id": "test-pipeline"})
+                    except Exception:
+                        errors += 1
+                    await asyncio.sleep(0.2)
+                return errors
+                
+            spam_task = asyncio.create_task(spam_queries())
+            await asyncio.sleep(1) # Let queries start hitting
+            
+            # 3. Kill Redis MID-TEST
             stop_container(REDIS_CONTAINER)
             
-            # 3. Verify system degrades gracefully (does not crash)
+            # 4. Verify system degrades gracefully (does not crash)
             res = await client.get("/health")
             assert res.status_code == 200
             
             # Even without Redis, the core API should stay up
             logger.info(f"Health after Redis kill: {res.json()}")
             
+            # Wait for spam to finish
+            await spam_task
+            
         finally:
-            # 4. Restore Redis
+            # 5. Restore Redis
             start_container(REDIS_CONTAINER)
             
         # 5. Verify full recovery
@@ -78,10 +96,22 @@ async def test_worker_chaos_requeues_jobs():
                 assert res.status_code == 200
                 doc_id = res.json()["document_id"]
             
-            # 2. Immediately kill worker (simulating mid-processing failure or immediately after queue)
+            # 2. Wait for it to enter 'processing' phase
+            entered_processing = False
+            for _ in range(10):
+                res = await client.get(f"/ingest/{doc_id}", headers=headers)
+                if res.json()["status"] == "processing":
+                    entered_processing = True
+                    break
+                await asyncio.sleep(0.5)
+                
+            if not entered_processing:
+                logger.warning("Job finished too fast or didn't start processing in time.")
+            
+            # 3. Kill worker MID-PROCESSING
             stop_container(WORKER_CONTAINER)
             
-            # 3. Verify status is still pending or processing
+            # 4. Verify status is still processing or pending (interrupted)
             res = await client.get(f"/ingest/{doc_id}", headers=headers)
             assert res.json()["status"] in ["pending", "processing"]
             
