@@ -70,7 +70,7 @@ async def process_document_pipeline(
                     if inj_result:
                         logger.warning(f"Prompt injection pattern detected in document {document_id}: {inj_result['pattern']}")
                         chunk.metadata["prompt_injection_detected"] = True
-                        chunk.metadata["injection_pattern"] = inj_result['pattern']
+                        chunk.metadata["pattern"] = inj_result['pattern']
 
             # 3. Embed chunks
             with tracer.start_as_current_span("ingestion.embed") as embed_span:
