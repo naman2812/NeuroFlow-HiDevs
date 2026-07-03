@@ -1,22 +1,25 @@
 import json
-import asyncio
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from pydantic import BaseModel
-from backend.providers.client import NeuroFlowClient
+
 from backend.providers.base import ChatMessage
+from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
+
 
 class ProcessedQuery(BaseModel):
     original_query: str
-    expanded_queries: List[str]
-    metadata_filters: Dict[str, Any]
+    expanded_queries: list[str]
+    metadata_filters: dict[str, Any]
     query_type: str
-    hypothetical_document: Optional[str] = None
+    hypothetical_document: str | None = None
+
 
 class QueryProcessor:
-    def __init__(self, client: NeuroFlowClient):
+    def __init__(self, client: NeuroFlowClient) -> None:
         self.client = client
-        
+
     async def process_query(self, query: str) -> ProcessedQuery:
         system_prompt = """
 You are an expert search query processing engine. Analyze the user's query and output a JSON object with the following fields:
@@ -27,40 +30,42 @@ You are an expert search query processing engine. Analyze the user's query and o
 
 Output ONLY valid JSON.
 """
-        
+
         messages = [
             ChatMessage(role="system", content=system_prompt),
-            ChatMessage(role="user", content=query)
+            ChatMessage(role="user", content=query),
         ]
-        
+
         criteria = RoutingCriteria(task_type="rag_generation")
-        
+
         try:
             # Use JSON mode if supported by the provider
-            result = await self.client.chat(messages, criteria, response_format={"type": "json_object"})
-            
+            result = await self.client.chat(
+                messages, criteria, response_format={"type": "json_object"}
+            )
+
             # Extract JSON string (handling potential markdown blocks just in case)
-            content = result.message.content.strip()
+            content = result.message.content.strip()  # type: ignore
             if content.startswith("```json"):
                 content = content[7:-3].strip()
             elif content.startswith("```"):
                 content = content[3:-3].strip()
-                
+
             parsed = json.loads(content)
-            
+
             return ProcessedQuery(
                 original_query=query,
                 expanded_queries=parsed.get("expanded_queries", []),
                 metadata_filters=parsed.get("metadata_filters", {}),
                 query_type=parsed.get("query_type", "factual"),
-                hypothetical_document=parsed.get("hypothetical_document")
+                hypothetical_document=parsed.get("hypothetical_document"),
             )
-        except Exception as e:
+        except Exception:
             # Fallback on failure
             return ProcessedQuery(
                 original_query=query,
                 expanded_queries=[],
                 metadata_filters={},
                 query_type="factual",
-                hypothetical_document=None
+                hypothetical_document=None,
             )

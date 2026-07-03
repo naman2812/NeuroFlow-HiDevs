@@ -1,17 +1,20 @@
 import asyncio
-from backend.providers.client import NeuroFlowClient
-from backend.providers.base import ChatMessage
-from backend.providers.router import RoutingCriteria
+from typing import Any
 from unittest.mock import AsyncMock
 
-async def main():
+from backend.providers.base import ChatMessage
+from backend.providers.client import NeuroFlowClient
+from backend.providers.router import RoutingCriteria
+
+
+async def main() -> Any:
     print("Testing Provider Capabilities...")
-    
+
     # Normally we'd use a real redis client if it's running
     mock_redis = AsyncMock()
     mock_redis.get.return_value = None
     client = NeuroFlowClient(redis_client=mock_redis)
-    
+
     # Test 1: Embeddings
     print("\n--- Testing embed(['hello world']) ---")
     try:
@@ -26,7 +29,7 @@ async def main():
     print("\n--- Testing stream('Say one word') ---")
     messages = [ChatMessage(role="user", content="Say one word")]
     criteria = RoutingCriteria(task_type="rag_generation")
-    
+
     try:
         # Loop through stream generator
         async for token in await client.stream_chat(messages, criteria):
@@ -34,6 +37,7 @@ async def main():
         print("\n")
     except Exception as e:
         print(f"Stream error: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,16 +1,18 @@
 import json
 from dataclasses import dataclass
-from typing import Optional
+
 from redis.asyncio import Redis
+
 
 @dataclass
 class RoutingCriteria:
     task_type: str  # "rag_generation" | "evaluation" | "embedding" | "classification"
-    max_cost_per_call: Optional[float] = None
+    max_cost_per_call: float | None = None
     require_vision: bool = False
     require_long_context: bool = False  # > 32k tokens in prompt, rule says route to > 100k
-    latency_budget_ms: Optional[int] = None
+    latency_budget_ms: int | None = None
     prefer_fine_tuned: bool = False
+
 
 @dataclass
 class ModelConfig:
@@ -21,14 +23,15 @@ class ModelConfig:
     input_cost_per_m: float
     output_cost_per_m: float
     is_judge: bool
-    fine_tuned_version: Optional[str] = None
-    fine_tuned_task: Optional[str] = None
+    fine_tuned_version: str | None = None
+    fine_tuned_task: str | None = None
+
 
 class ModelRouter:
-    def __init__(self, redis_client: Redis):
+    def __init__(self, redis_client: Redis) -> None:
         self.redis = redis_client
         self.cache_key = "router:models"
-        
+
         # Default fallback models if Redis is empty
         self.default_models = [
             ModelConfig("gpt-4o", "openai", True, 128000, 2.50, 10.00, True),
@@ -41,7 +44,7 @@ class ModelRouter:
         data = await self.redis.get(self.cache_key)
         if not data:
             return self.default_models
-        
+
         try:
             parsed = json.loads(data)
             return [ModelConfig(**m) for m in parsed]
@@ -58,7 +61,7 @@ class ModelRouter:
         ordered from most preferred (cheapest/fine-tuned) to least preferred.
         """
         models = await self._get_registered_models()
-        
+
         # Rule 4: If task_type="evaluation" -> always use a capable judge model, never fine-tuned
         if criteria.task_type == "evaluation":
             models = [m for m in models if m.is_judge]
@@ -69,18 +72,18 @@ class ModelRouter:
             # Rule 1: If require_vision=True -> route to a vision-capable model
             if criteria.require_vision and not m.vision:
                 continue
-                
+
             # Rule 2: If require_long_context=True -> route to a model with >100k context
             if criteria.require_long_context and m.context_window <= 100000:
                 continue
-                
+
             # Rule 5: If max_cost_per_call is set -> filter out models that would exceed it
             if criteria.max_cost_per_call is not None:
                 if self._estimate_cost(m) > criteria.max_cost_per_call:
                     continue
-                    
+
             valid_models.append(m)
-            
+
         if not valid_models:
             raise ValueError(f"No models satisfy the hard constraints: {criteria}")
 
@@ -96,5 +99,5 @@ class ModelRouter:
         valid_models.sort(key=lambda m: self._estimate_cost(m))
         for m in valid_models:
             chain.append((m.provider, m.model_name))
-        
+
         return chain

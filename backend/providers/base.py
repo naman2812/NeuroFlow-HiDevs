@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+from typing import Any
+
 
 @dataclass
 class ChatMessage:
     role: str  # "system" | "user" | "assistant"
-    content: str | list  # str for text, list for multi-modal
+    content: str | list[Any]  # str for text, list for multi-modal
+
 
 @dataclass
 class GenerationResult:
@@ -17,15 +20,18 @@ class GenerationResult:
     cost_usd: float
     finish_reason: str
 
+
 class BaseLLMProvider(ABC):
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str) -> None:
         self.model_name = model_name
 
     @abstractmethod
-    async def complete(self, messages: list[ChatMessage], **kwargs) -> GenerationResult: ...
+    async def complete(self, messages: list[ChatMessage], **kwargs: Any) -> GenerationResult: ...
 
     @abstractmethod
-    async def stream(self, messages: list[ChatMessage], **kwargs) -> AsyncGenerator[str, None]: ...
+    async def stream(
+        self, messages: list[ChatMessage], **kwargs: Any
+    ) -> AsyncGenerator[str, None]: ...
 
     @abstractmethod
     async def embed(self, texts: list[str]) -> list[list[float]]: ...

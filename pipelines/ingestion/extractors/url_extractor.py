@@ -1,16 +1,18 @@
-import httpx
 import urllib.robotparser
 from urllib.parse import urlparse
+
+import httpx
 import trafilatura
-from typing import List
+
 from .base import ExtractedPage
 
-async def extract_url(url: str) -> List[ExtractedPage]:
+
+async def extract_url(url: str) -> list[ExtractedPage]:
     parsed_url = urlparse(url)
     robots_url = f"{parsed_url.scheme}://{parsed_url.netloc}/robots.txt"
-    
+
     rp = urllib.robotparser.RobotFileParser()
-    
+
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             robots_resp = await client.get(robots_url)
@@ -29,29 +31,24 @@ async def extract_url(url: str) -> List[ExtractedPage]:
 
     # Extract with trafilatura
     extracted = trafilatura.extract(
-        html, 
-        include_tables=True, 
+        html,
+        include_tables=True,
         include_formatting=True,
         include_links=True,
-        output_format="markdown"
+        output_format="markdown",
     )
-    
+
     if not extracted:
         extracted = "No content could be extracted."
-        
+
     metadata = trafilatura.extract_metadata(html)
     meta_dict = {
         "title": metadata.title if metadata else None,
         "author": metadata.author if metadata else None,
         "canonical_url": metadata.url if metadata else url,
-        "publish_date": metadata.date if metadata else None
+        "publish_date": metadata.date if metadata else None,
     }
-    
+
     return [
-        ExtractedPage(
-            page_number=1,
-            content=extracted,
-            content_type="text",
-            metadata=meta_dict
-        )
+        ExtractedPage(page_number=1, content=extracted, content_type="text", metadata=meta_dict)
     ]

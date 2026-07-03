@@ -1,21 +1,26 @@
-import time
 import asyncio
-import uuid
 import math
-from fastapi import Request, HTTPException
-from backend.config import settings
+import time
+import uuid
+from typing import Any
+
 import redis.asyncio as aioredis
+from fastapi import HTTPException, Request
+
+from backend.config import settings
 
 _redis_client = None
 
-def get_redis_client():
+
+def get_redis_client() -> Any:
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
             f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
-            decode_responses=True
+            decode_responses=True,
         )
     return _redis_client
+
 
 # Lua Script for Token Bucket
 TOKEN_BUCKET_SCRIPT = """
@@ -52,20 +57,22 @@ else
 end
 """
 
-async def wait_for_token(key: str, capacity: int, refill_rate: float, max_wait: int = 30):
+
+async def wait_for_token(key: str, capacity: int, refill_rate: float, max_wait: int = 30) -> Any:
     client = get_redis_client()
     start_time = time.time()
-    
+
     while time.time() - start_time < max_wait:
         now = time.time()
         allowed = await client.eval(TOKEN_BUCKET_SCRIPT, 1, key, capacity, refill_rate, now)
         if allowed == 1:
             return True
         await asyncio.sleep(0.5)
-        
+
     raise TimeoutError(f"Rate limit token wait timeout exceeded for {key}")
 
-async def consume_llm_token(provider: str):
+
+async def consume_llm_token(provider: str) -> Any:
     if provider == "openai":
         capacity = 3000
         refill_rate = 50.0
@@ -75,15 +82,17 @@ async def consume_llm_token(provider: str):
     else:
         capacity = 1000
         refill_rate = 15.0
-        
+
     key = f"rpb:{provider}:tokens"
     await wait_for_token(key, capacity, refill_rate)
 
-async def consume_pipeline_token(pipeline_id: str, rpm: int):
+
+async def consume_pipeline_token(pipeline_id: str, rpm: int) -> Any:
     key = f"rpb:pipeline:{pipeline_id}:tokens"
     capacity = rpm
     refill_rate = rpm / 60.0
     await wait_for_token(key, capacity, refill_rate)
+
 
 # Lua script for sliding window API rate limiting
 SLIDING_WINDOW_SCRIPT = """
@@ -112,23 +121,30 @@ else
 end
 """
 
-def rate_limit_endpoint(max_requests: int, window_seconds: int):
-    async def dependency(request: Request):
+
+def rate_limit_endpoint(max_requests: int, window_seconds: int) -> Any:
+    async def dependency(request: Request) -> Any:
         client = get_redis_client()
         ip = request.client.host if request.client else "unknown"
         endpoint = request.url.path
         key = f"rate_limit:{endpoint}:{ip}"
-        
+
         now = time.time()
         member = f"{now}:{uuid.uuid4().hex}"
-        
-        retry_after = await client.eval(SLIDING_WINDOW_SCRIPT, 1, key, now, window_seconds, max_requests, member)
-        
+
+        retry_after = await client.eval(
+            SLIDING_WINDOW_SCRIPT, 1, key, now, window_seconds, max_requests, member
+        )
+
         if retry_after != -1:
             raise HTTPException(
                 status_code=429,
                 detail="Too Many Requests",
-                headers={"Retry-After": str(int(math.ceil(retry_after)) if retry_after > 0 else window_seconds)}
+                headers={
+                    "Retry-After": str(
+                        int(math.ceil(retry_after)) if retry_after > 0 else window_seconds
+                    )
+                },
             )
-            
+
     return dependency

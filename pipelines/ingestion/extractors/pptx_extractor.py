@@ -1,41 +1,43 @@
-import io
 import base64
-from typing import List
+import io
+
+from PIL import Image
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
-from PIL import Image
 
-from backend.providers.client import NeuroFlowClient
 from backend.providers.base import ChatMessage
+from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
+
 from .base import ExtractedPage
 
-async def extract_pptx(file_path: str, client: NeuroFlowClient) -> List[ExtractedPage]:
+
+async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[ExtractedPage]:
     prs = Presentation(file_path)
-    pages: List[ExtractedPage] = []
-    
+    pages: list[ExtractedPage] = []
+
     criteria = RoutingCriteria(task_type="classification", require_vision=True)
-    
+
     for i, slide in enumerate(prs.slides):
         slide_text = []
         notes = ""
         images = []
-        
+
         # Extract text and images from shapes
         for shape in slide.shapes:
             if hasattr(shape, "text") and shape.text.strip():
                 slide_text.append(shape.text.strip())
-                
+
             if getattr(shape, "shape_type", None) == MSO_SHAPE_TYPE.PICTURE:
                 try:
                     images.append(shape.image.blob)
                 except Exception as e:
                     print(f"Failed to extract image from shape: {e}")
-                    
+
         # Extract speaker notes
         if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
             notes = slide.notes_slide.notes_text_frame.text.strip()
-            
+
         # Process images with Vision LLM
         descriptions = []
         for img_blob in images:
@@ -45,52 +47,60 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> List[Extracte
                     if max(img.size) > max_size:
                         ratio = max_size / max(img.size)
                         new_size = (int(img.width * ratio), int(img.height * ratio))
-                        img = img.resize(new_size, Image.Resampling.LANCZOS)
-                    
+                        img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
+
                     buffered = io.BytesIO()
                     img_format = img.format if img.format else "JPEG"
                     if img.mode != "RGB":
-                        img = img.convert("RGB")
+                        img = img.convert("RGB")  # type: ignore
                         img_format = "JPEG"
-                        
+
                     img.save(buffered, format=img_format)
                     img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
                     mime_type = f"image/{img_format.lower()}"
-                    
+
                     messages = [
                         ChatMessage(
                             role="user",
                             content=[
-                                {"type": "text", "text": "Provide a highly detailed description of this image or diagram from a presentation slide."},
-                                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{img_base64}"}}
-                            ]
+                                {
+                                    "type": "text",
+                                    "text": "Provide a highly detailed description of this image or diagram from a presentation slide.",
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:{mime_type};base64,{img_base64}"},
+                                },
+                            ],
                         )
                     ]
-                    
+
                     generation = await client.chat(messages, criteria)
                     descriptions.append(generation.content.strip())
             except Exception as e:
-                print(f"Vision LLM failed for slide {i+1}: {e}")
+                print(f"Vision LLM failed for slide {i + 1}: {e}")
                 descriptions.append(f"[Image description failed: {e}]")
-                
+
         # Combine everything
         combined_content = []
         if slide_text:
             combined_content.append("\n".join(slide_text))
-            
+
         if notes:
             combined_content.append(f"Speaker Notes:\n{notes}")
-            
+
         if descriptions:
-            combined_content.append(f"Images on this slide:\n" + "\n\n".join(descriptions))
-            
+            combined_content.append("Images on this slide:\n" + "\n\n".join(descriptions))
+
         final_text = "\n\n".join(combined_content).strip()
-        
-        pages.append(ExtractedPage(
-            page_number=i + 1,
-            content=final_text if final_text else "[Empty Slide]",
-            content_type="text",
-            metadata={"has_notes": bool(notes), "image_count": len(images)}
-        ))
-        
+
+        pages.append(
+            ExtractedPage(
+                page_number=i + 1,
+                content=final_text if final_text else "[Empty Slide]",
+                content_type="text",
+                metadata={"has_notes": bool(notes), "image_count": len(images)},
+            )
+        )
+
     return pages

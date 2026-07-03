@@ -1,17 +1,23 @@
+from typing import Any
+
 import asyncpg
+
 from backend.config import settings
 
 pool = None
 
-async def create_pool():
+
+async def create_pool() -> Any:
     global pool
     pool = await asyncpg.create_pool(dsn=settings.database_url)
 
-async def close_pool():
+
+async def close_pool() -> Any:
     global pool
     if pool:
         await pool.close()
         pool = None
 
-def get_pool():
+
+def get_pool() -> Any:
     return pool

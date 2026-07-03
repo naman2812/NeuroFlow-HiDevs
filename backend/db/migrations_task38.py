@@ -1,26 +1,30 @@
 import asyncio
-import os
+from typing import Any
+
 from backend.db.pool import create_pool, get_pool
 
-async def main():
+
+async def main() -> Any:
     await create_pool()
     pool = get_pool()
     async with pool.acquire() as conn:
         print("Applying Task 08 migrations...")
-        
+
         # Add columns to pipelines
         try:
             await conn.execute("ALTER TABLE pipelines ADD COLUMN version INT DEFAULT 1")
             print("Added version column to pipelines.")
         except Exception as e:
             print(f"Skipped pipelines.version: {e}")
-            
+
         try:
-            await conn.execute("ALTER TABLE pipelines ADD COLUMN status VARCHAR(20) DEFAULT 'active'")
+            await conn.execute(
+                "ALTER TABLE pipelines ADD COLUMN status VARCHAR(20) DEFAULT 'active'"
+            )
             print("Added status column to pipelines.")
         except Exception as e:
             print(f"Skipped pipelines.status: {e}")
-            
+
         # Create pipeline_versions table
         try:
             await conn.execute("""
@@ -47,16 +51,17 @@ async def main():
             print("Added pipeline_version column to pipeline_runs.")
         except Exception as e:
             print(f"Skipped pipeline_runs.pipeline_version: {e}")
-            
+
         try:
             await conn.execute("ALTER TABLE pipeline_runs ADD COLUMN retrieval_latency_ms INT")
             print("Added retrieval_latency_ms column to pipeline_runs.")
         except Exception as e:
             print(f"Skipped pipeline_runs.retrieval_latency_ms: {e}")
-            
+
         # Add metadata column to pipelines if needed? No, config is JSONB.
-        
+
         print("Task 08 migrations complete.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

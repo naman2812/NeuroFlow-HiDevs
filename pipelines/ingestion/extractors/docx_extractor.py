@@ -1,13 +1,16 @@
+from typing import Any
+
 from docx import Document
 from docx.document import Document as _Document
-from docx.oxml.text.paragraph import CT_P
 from docx.oxml.table import CT_Tbl
-from docx.table import _Cell, Table
+from docx.oxml.text.paragraph import CT_P
+from docx.table import Table, _Cell
 from docx.text.paragraph import Paragraph
-from typing import List
+
 from .base import ExtractedPage
 
-def iter_block_items(parent):
+
+def iter_block_items(parent: Any) -> Any:
     """
     Yield each paragraph and table child within *parent*, in document order.
     Each returned value is an instance of either Table or Paragraph.
@@ -25,26 +28,29 @@ def iter_block_items(parent):
         elif isinstance(child, CT_Tbl):
             yield Table(child, parent)
 
-def extract_docx(file_path: str) -> List[ExtractedPage]:
+
+def extract_docx(file_path: str) -> list[ExtractedPage]:
     doc = Document(file_path)
-    pages: List[ExtractedPage] = []
-    
+    pages: list[ExtractedPage] = []
+
     current_heading = "Document Start"
     current_level = "h1"
-    current_content = []
+    current_content = []  # type: ignore
     page_counter = 1
-    
-    def flush():
+
+    def flush() -> Any:
         nonlocal current_content, page_counter
         if current_content:
             text = "\n".join(current_content).strip()
             if text:
-                pages.append(ExtractedPage(
-                    page_number=page_counter,
-                    content=text,
-                    content_type="text",
-                    metadata={"level": current_level, "section": current_heading}
-                ))
+                pages.append(
+                    ExtractedPage(
+                        page_number=page_counter,
+                        content=text,
+                        content_type="text",
+                        metadata={"level": current_level, "section": current_heading},
+                    )
+                )
             current_content = []
             page_counter += 1
 
@@ -54,9 +60,9 @@ def extract_docx(file_path: str) -> List[ExtractedPage]:
             for p in section.header.paragraphs:
                 if p.text.strip():
                     current_content.append(p.text.strip())
-                    
-    flush() # Flush headers as a separate block
-    
+
+    flush()  # Flush headers as a separate block
+
     # Reset for body
     current_heading = "Document Start"
     current_level = "h1"
@@ -73,25 +79,27 @@ def extract_docx(file_path: str) -> List[ExtractedPage]:
             else:
                 if block.text.strip():
                     current_content.append(block.text.strip())
-                    
+
         elif isinstance(block, Table):
-            flush() # flush text before table
-            
+            flush()  # flush text before table
+
             md_table = []
             for row_idx, row in enumerate(block.rows):
-                clean_row = [cell.text.replace('\n', ' ').strip() for cell in row.cells]
+                clean_row = [cell.text.replace("\n", " ").strip() for cell in row.cells]
                 md_table.append("| " + " | ".join(clean_row) + " |")
                 if row_idx == 0:
                     md_table.append("|" + "|".join(["---" for _ in row.cells]) + "|")
-                    
+
             if md_table:
-                pages.append(ExtractedPage(
-                    page_number=page_counter,
-                    content="\n".join(md_table),
-                    content_type="table",
-                    metadata={"level": current_level, "section": current_heading}
-                ))
+                pages.append(
+                    ExtractedPage(
+                        page_number=page_counter,
+                        content="\n".join(md_table),
+                        content_type="table",
+                        metadata={"level": current_level, "section": current_heading},
+                    )
+                )
                 page_counter += 1
-                
-    flush() # flush any remaining
+
+    flush()  # flush any remaining
     return pages
