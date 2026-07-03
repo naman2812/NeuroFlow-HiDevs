@@ -96,12 +96,12 @@ async def health_check() -> Any:  # noqa: ANN401
         cb_status = {}
         for provider in ["openai", "anthropic"]:
             state = await r.get(f"circuit:{provider}:state") or "closed"
-            cb = {"state": state}
+            cb: dict[str, Any] = {"state": state}
             if state == "open":
-                cb["opened_at"] = await r.get(f"circuit:{provider}:opened_at")  # type: ignore
+                cb["opened_at"] = await r.get(f"circuit:{provider}:opened_at")
             else:
                 fails = await r.get(f"circuit:{provider}:failure_count")
-                cb["failure_count"] = int(fails) if fails else 0  # type: ignore
+                cb["failure_count"] = int(fails) if fails else 0
             cb_status[provider] = cb
 
         queue_depth = await r.llen("queue:ingest")

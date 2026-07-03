@@ -21,7 +21,7 @@ class NeuroFlowClient:
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls, redis_client: Redis = None) -> Any:  # type: ignore  # noqa: ANN401
+    def __new__(cls, redis_client: Redis | None = None) -> Any:  # noqa: ANN401
         with cls._lock:
             if cls._instance is None:
                 if redis_client is None:
