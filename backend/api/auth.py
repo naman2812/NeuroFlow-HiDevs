@@ -14,7 +14,7 @@ class TokenRequest(BaseModel):
 
 
 @router.post("/token")
-async def generate_token(req: TokenRequest) -> Any:
+async def generate_token(req: TokenRequest) -> Any:  # noqa: ANN401
     # Dummy verification - in real world check DB
     if not req.client_id or not req.client_secret:
         raise HTTPException(status_code=401, detail="Invalid credentials")

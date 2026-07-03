@@ -23,14 +23,14 @@ class FineTuneManager:
             print("No OpenAI API key, mocking job submission")
             return f"ftjob-{UUID(int=1).hex}"
 
-        file_resp = await self.client.files.create(file=open(jsonl_path, "rb"), purpose="fine-tune")
+        file_resp = await self.client.files.create(file=open(jsonl_path, "rb"), purpose="fine-tune")  # noqa: ASYNC230
         job = await self.client.fine_tuning.jobs.create(
             training_file=file_resp.id, model=base_model
         )
         return job.id
 
 
-async def poll_finetune_jobs(ctx: Any) -> Any:
+async def poll_finetune_jobs(ctx: Any) -> Any:  # noqa: ANN401
     """
     ARQ Cron job to poll active fine-tuning jobs.
     Runs every 60 seconds.
@@ -56,7 +56,7 @@ async def poll_finetune_jobs(ctx: Any) -> Any:
 
     async with db_pool.acquire() as conn:
         jobs = await conn.fetch(
-            "SELECT id, provider_job_id, mlflow_run_id, base_model FROM finetune_jobs WHERE status = 'pending'"
+            "SELECT id, provider_job_id, mlflow_run_id, base_model FROM finetune_jobs WHERE status = 'pending'"  # noqa: E501
         )
 
         for job_row in jobs:
@@ -88,7 +88,7 @@ async def poll_finetune_jobs(ctx: Any) -> Any:
                         UPDATE finetune_jobs 
                         SET status = 'succeeded', completed_at = $1, metrics = $2, provider_job_id = $3
                         WHERE id = $4
-                        """,
+                        """,  # noqa: E501
                         datetime.now(UTC),
                         json.dumps(metrics),
                         fine_tuned_model,

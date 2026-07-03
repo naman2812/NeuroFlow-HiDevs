@@ -88,7 +88,7 @@ class ModelRouter:
             raise ValueError(f"No models satisfy the hard constraints: {criteria}")
 
         chain = []
-        # Rule 3: If prefer_fine_tuned=True AND a fine-tuned model is registered for this task_type -> route to it
+        # Rule 3: If prefer_fine_tuned=True AND a fine-tuned model is registered for this task_type -> route to it  # noqa: E501
         if criteria.prefer_fine_tuned:
             for m in valid_models:
                 if m.fine_tuned_version and m.fine_tuned_task == criteria.task_type:

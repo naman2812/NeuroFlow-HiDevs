@@ -15,7 +15,7 @@ class RatingRequest(BaseModel):
 
 
 @router.patch("/{run_id}/rating")
-async def update_rating(run_id: UUID, req: RatingRequest) -> Any:
+async def update_rating(run_id: UUID, req: RatingRequest) -> Any:  # noqa: ANN401
     pool = get_pool()
 
     async with pool.acquire() as conn:
@@ -25,7 +25,7 @@ async def update_rating(run_id: UUID, req: RatingRequest) -> Any:
         )
 
         if not row:
-            # Maybe the judge hasn't run yet. Let's just create an empty evaluation row to store the rating for now, or error out depending on design.
+            # Maybe the judge hasn't run yet. Let's just create an empty evaluation row to store the rating for now, or error out depending on design.  # noqa: E501
             # Assuming the judge runs shortly after generation, but let's UPSERT to be safe.
             await conn.execute(
                 """

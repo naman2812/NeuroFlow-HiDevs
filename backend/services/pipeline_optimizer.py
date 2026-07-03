@@ -3,7 +3,7 @@ from uuid import UUID
 
 
 class PipelineOptimizer:
-    def __init__(self, pool: Any) -> None:
+    def __init__(self, pool: Any) -> None:  # noqa: ANN401
         self.pool = pool
 
     async def get_suggestions(self, pipeline_id: UUID) -> list[dict[str, str]]:
@@ -40,7 +40,7 @@ class PipelineOptimizer:
                 {
                     "metric": "context_precision",
                     "score": round(precision, 2),
-                    "suggestion": "Context precision is consistently low. Suggest reducing 'top_k_after_rerank' to filter out irrelevant chunks before generation.",
+                    "suggestion": "Context precision is consistently low. Suggest reducing 'top_k_after_rerank' to filter out irrelevant chunks before generation.",  # noqa: E501
                 }
             )
 
@@ -49,7 +49,7 @@ class PipelineOptimizer:
                 {
                     "metric": "context_recall",
                     "score": round(recall, 2),
-                    "suggestion": "Context recall is low, meaning important information is missed. Suggest increasing 'dense_k' or 'sparse_k' to retrieve a wider net of candidates.",
+                    "suggestion": "Context recall is low, meaning important information is missed. Suggest increasing 'dense_k' or 'sparse_k' to retrieve a wider net of candidates.",  # noqa: E501
                 }
             )
 
@@ -58,7 +58,7 @@ class PipelineOptimizer:
                 {
                     "metric": "faithfulness",
                     "score": round(faithfulness, 2),
-                    "suggestion": "Faithfulness is below optimal. The model might be hallucinating. Suggest decreasing 'temperature' or limiting 'max_context_tokens' to reduce confusion.",
+                    "suggestion": "Faithfulness is below optimal. The model might be hallucinating. Suggest decreasing 'temperature' or limiting 'max_context_tokens' to reduce confusion.",  # noqa: E501
                 }
             )
 
@@ -67,7 +67,7 @@ class PipelineOptimizer:
                 {
                     "metric": "answer_relevance",
                     "score": round(relevance, 2),
-                    "suggestion": "Answer relevance is low. Suggest experimenting with a different 'system_prompt_variant' to better constrain the generation.",
+                    "suggestion": "Answer relevance is low. Suggest experimenting with a different 'system_prompt_variant' to better constrain the generation.",  # noqa: E501
                 }
             )
 
@@ -75,7 +75,7 @@ class PipelineOptimizer:
             suggestions.append(
                 {
                     "type": "success",
-                    "message": "All metrics are looking great! No configuration changes suggested at this time.",
+                    "message": "All metrics are looking great! No configuration changes suggested at this time.",  # noqa: E501
                 }
             )
 

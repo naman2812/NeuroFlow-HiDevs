@@ -21,7 +21,7 @@ class FineTuneRequest(BaseModel):
     format: str = "sft"  # "sft" or "dpo"
 
 
-async def get_redis() -> Any:
+async def get_redis() -> Any:  # noqa: ANN401
     client = aioredis.from_url(
         f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
         decode_responses=True,
@@ -35,10 +35,10 @@ async def get_redis() -> Any:
 @router.post("/jobs")
 async def create_finetune_job(
     req: FineTuneRequest,
-    db_pool: Any = Depends(get_pool),
-    redis_client: Any = Depends(get_redis),
-    user: Any = Depends(RequireScope("admin")),
-) -> Any:
+    db_pool: Any = Depends(get_pool),  # noqa: ANN401
+    redis_client: Any = Depends(get_redis),  # noqa: ANN401
+    user: Any = Depends(RequireScope("admin")),  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     job_id = uuid4()
     req.base_model = sanitize_text(req.base_model)
     req.format = sanitize_text(req.format)
@@ -81,7 +81,7 @@ async def create_finetune_job(
             """
             INSERT INTO finetune_jobs (id, provider_job_id, base_model, status, training_pair_count, mlflow_run_id)
             VALUES ($1, $2, $3, 'pending', $4, $5)
-            """,
+            """,  # noqa: E501
             job_id,
             provider_job_id,
             req.base_model,
@@ -94,19 +94,19 @@ async def create_finetune_job(
 
 @router.get("/jobs")
 async def list_finetune_jobs(
-    db_pool: Any = Depends(get_pool), user: Any = Depends(RequireScope("admin"))
-) -> Any:
+    db_pool: Any = Depends(get_pool), user: Any = Depends(RequireScope("admin"))  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     async with db_pool.acquire() as conn:
         records = await conn.fetch(
-            "SELECT id, provider_job_id, base_model, status, created_at, completed_at FROM finetune_jobs ORDER BY created_at DESC"
+            "SELECT id, provider_job_id, base_model, status, created_at, completed_at FROM finetune_jobs ORDER BY created_at DESC"  # noqa: E501
         )
     return [dict(r) for r in records]
 
 
 @router.get("/jobs/{job_id}")
 async def get_finetune_job(
-    job_id: UUID, db_pool: Any = Depends(get_pool), user: Any = Depends(RequireScope("admin"))
-) -> Any:
+    job_id: UUID, db_pool: Any = Depends(get_pool), user: Any = Depends(RequireScope("admin"))  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     async with db_pool.acquire() as conn:
         record = await conn.fetchrow("SELECT * FROM finetune_jobs WHERE id = $1", job_id)
     if not record:
@@ -120,10 +120,10 @@ async def get_finetune_job(
 @router.get("/training-data/preview")
 async def preview_training_data(
     format: str = "sft",
-    db_pool: Any = Depends(get_pool),
-    redis_client: Any = Depends(get_redis),
-    user: Any = Depends(RequireScope("admin")),
-) -> Any:
+    db_pool: Any = Depends(get_pool),  # noqa: ANN401
+    redis_client: Any = Depends(get_redis),  # noqa: ANN401
+    user: Any = Depends(RequireScope("admin")),  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     format = sanitize_text(format)
     if format not in ["sft", "dpo"]:
         raise HTTPException(status_code=400, detail="format must be 'sft' or 'dpo'")

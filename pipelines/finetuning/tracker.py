@@ -33,7 +33,7 @@ class FineTuneTracker:
 
     def log_job_completion(
         self, run_id: str, job_id: UUID, provider_job_id: str, metrics: dict[str, Any]
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         with mlflow.start_run(run_id=run_id):
             mlflow.log_metrics(metrics)
 

@@ -41,7 +41,7 @@ class OpenAIProvider(BaseLLMProvider):
     def _format_messages(self, messages: list[ChatMessage]) -> list[dict]:  # type: ignore
         return [{"role": msg.role, "content": msg.content} for msg in messages]
 
-    async def _execute_with_retry(self, func: Any, *args: Any, **kwargs: Any) -> Any:
+    async def _execute_with_retry(self, func: Any, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
         import asyncio
 
         retries = 0
@@ -61,12 +61,14 @@ class OpenAIProvider(BaseLLMProvider):
                 else:
                     await asyncio.sleep(2**retries)
 
-    async def complete(self, messages: list[ChatMessage], **kwargs: Any) -> GenerationResult:
+    async def complete(self, messages: list[ChatMessage], **kwargs: Any) -> GenerationResult:  # noqa: ANN401
         start_time = time.time()
 
-        async def _call() -> Any:
+        async def _call() -> Any:  # noqa: ANN401
             return await self.client.chat.completions.create(
-                model=self.model_name, messages=self._format_messages(messages), **kwargs  # type: ignore
+                model=self.model_name,
+                messages=self._format_messages(messages),  # type: ignore
+                **kwargs,
             )
 
         response = await self._execute_with_retry(_call)
@@ -95,8 +97,8 @@ class OpenAIProvider(BaseLLMProvider):
             finish_reason=finish_reason,
         )
 
-    async def stream(self, messages: list[ChatMessage], **kwargs: Any) -> AsyncGenerator[str, None]:  # type: ignore
-        async def _call() -> Any:
+    async def stream(self, messages: list[ChatMessage], **kwargs: Any) -> AsyncGenerator[str, None]:  # type: ignore  # noqa: ANN401
+        async def _call() -> Any:  # noqa: ANN401
             return await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=self._format_messages(messages),  # type: ignore
@@ -122,7 +124,7 @@ class OpenAIProvider(BaseLLMProvider):
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
 
-            async def _call() -> Any:
+            async def _call() -> Any:  # noqa: ANN401
                 return await self.client.embeddings.create(model=model, input=batch)
 
             response = await self._execute_with_retry(_call)

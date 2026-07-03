@@ -41,10 +41,10 @@ async def test_streaming_mock() -> None:
     print("Testing progressive streaming...")
     provider = OpenAIProvider("gpt-4o-mini")
 
-    async def mock_create(*args: Any, **kwargs: Any) -> Any:
-        async def mock_stream() -> Any:
+    async def mock_create(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+        async def mock_stream() -> Any:  # noqa: ANN401
             class MockChoice:
-                def __init__(self, content: Any) -> None:
+                def __init__(self, content: Any) -> None:  # noqa: ANN401
                     class Delta:
                         pass
 
@@ -52,7 +52,7 @@ async def test_streaming_mock() -> None:
                     self.delta.content = content  # type: ignore
 
             class MockChunk:
-                def __init__(self, content: Any) -> None:
+                def __init__(self, content: Any) -> None:  # noqa: ANN401
                     self.choices = [MockChoice(content)]
 
             yield MockChunk("Hello")
@@ -61,7 +61,7 @@ async def test_streaming_mock() -> None:
 
         # Simulate an AsyncStream object that allows async iteration
         class MockAsyncStream:
-            def __aiter__(self) -> Any:
+            def __aiter__(self) -> Any:  # noqa: ANN401
                 return mock_stream()
 
         return MockAsyncStream()
@@ -81,7 +81,7 @@ async def test_rate_limit_retry() -> None:
 
     call_count = 0
 
-    async def mock_create(*args: Any, **kwargs: Any) -> Any:
+    async def mock_create(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
         nonlocal call_count
         call_count += 1
         if call_count < 3:
@@ -186,7 +186,7 @@ async def test_metrics_and_telemetry() -> None:
     print("Ã¢Å“â€¦ OpenTelemetry spans properly captured.")
 
 
-async def main() -> Any:
+async def main() -> Any:  # noqa: ANN401
     await test_full_interface()
     await test_streaming_mock()
     await test_rate_limit_retry()

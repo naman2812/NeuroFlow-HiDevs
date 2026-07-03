@@ -7,7 +7,7 @@ from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
 
 
-async def main() -> Any:
+async def main() -> Any:  # noqa: ANN401
     print("Testing Provider Capabilities...")
 
     # Normally we'd use a real redis client if it's running

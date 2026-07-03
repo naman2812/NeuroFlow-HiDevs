@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 _redis_client = None
 
 
-def get_redis_client() -> Any:
+def get_redis_client() -> Any:  # noqa: ANN401
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
@@ -34,7 +34,7 @@ class TimeoutManager:
     }
 
     @classmethod
-    async def _update_latency(cls, task_type: str, latency: float) -> Any:
+    async def _update_latency(cls, task_type: str, latency: float) -> Any:  # noqa: ANN401
         client = get_redis_client()
         now = time.time()
 
@@ -42,7 +42,7 @@ class TimeoutManager:
         await client.lpush(f"latencies:{task_type}", str(latency))
         await client.ltrim(f"latencies:{task_type}", 0, 999)
 
-        # Check if we need to recalculate p95 (cache it for 30 seconds to avoid sorting on every call)
+        # Check if we need to recalculate p95 (cache it for 30 seconds to avoid sorting on every call)  # noqa: E501
         cached_p95 = await client.get(f"p95_cached:{task_type}")
         if not cached_p95:
             latencies = await client.lrange(f"latencies:{task_type}", 0, -1)
@@ -69,10 +69,10 @@ class TimeoutManager:
                     oldest_p95 = float(history[0][0].split(":")[0])
                     oldest_time = history[0][1]
 
-                    # If we have data spanning at least 15 minutes, and current p95 is significantly higher (e.g. 50% higher)
+                    # If we have data spanning at least 15 minutes, and current p95 is significantly higher (e.g. 50% higher)  # noqa: E501
                     if now - oldest_time > 900 and p95 > oldest_p95 * 1.5:
                         logger.warning(
-                            f"Increasing p95 latency trend detected for {task_type}! Old p95: {oldest_p95:.2f}s, Current p95: {p95:.2f}s"
+                            f"Increasing p95 latency trend detected for {task_type}! Old p95: {oldest_p95:.2f}s, Current p95: {p95:.2f}s"  # noqa: E501
                         )
 
     @classmethod
@@ -84,13 +84,13 @@ class TimeoutManager:
         if cached_p95:
             p95 = float(cached_p95)
             # Automatically adjust timeout to p95 * 1.5
-            # We enforce a sensible floor so it doesn't get ridiculously small and cause false timeouts
+            # We enforce a sensible floor so it doesn't get ridiculously small and cause false timeouts  # noqa: E501
             return max(p95 * 1.5, base_timeout * 0.25)
 
         return base_timeout
 
     @classmethod
-    async def run(cls, task_type: str, coro: Any) -> Any:
+    async def run(cls, task_type: str, coro: Any) -> Any:  # noqa: ANN401
         timeout = await cls.get_timeout(task_type)
         start_time = time.time()
 

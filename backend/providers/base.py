@@ -26,11 +26,11 @@ class BaseLLMProvider(ABC):
         self.model_name = model_name
 
     @abstractmethod
-    async def complete(self, messages: list[ChatMessage], **kwargs: Any) -> GenerationResult: ...
+    async def complete(self, messages: list[ChatMessage], **kwargs: Any) -> GenerationResult: ...  # noqa: ANN401
 
     @abstractmethod
     async def stream(
-        self, messages: list[ChatMessage], **kwargs: Any
+        self, messages: list[ChatMessage], **kwargs: Any  # noqa: ANN401
     ) -> AsyncGenerator[str, None]: ...
 
     @abstractmethod

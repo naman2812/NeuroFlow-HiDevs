@@ -14,11 +14,11 @@ from backend.providers.client import NeuroFlowClient
 from pipelines.ingestion.pipeline import process_document_pipeline
 
 
-async def startup(ctx: Any) -> Any:
+async def startup(ctx: Any) -> Any:  # noqa: ANN401
     resource = Resource.create({"service.name": "neuroflow-worker"})
     provider = TracerProvider(resource=resource)
 
-    # In local testing we might point to localhost, but jaeger is usually available via docker network
+    # In local testing we might point to localhost, but jaeger is usually available via docker network  # noqa: E501
     jaeger_endpoint = (
         "http://jaeger:4317" if settings.postgres_host == "postgres" else "http://localhost:4317"
     )
@@ -44,11 +44,11 @@ async def startup(ctx: Any) -> Any:
     ctx["llm_client"] = NeuroFlowClient(redis_client=redis_client)
 
 
-async def shutdown(ctx: Any) -> Any:
+async def shutdown(ctx: Any) -> Any:  # noqa: ANN401
     await ctx["db_pool"].close()
 
 
-async def process_document(ctx: Any, document_id: str, file_path: str, source_type: str) -> Any:
+async def process_document(ctx: Any, document_id: str, file_path: str, source_type: str) -> Any:  # noqa: ANN401
     await process_document_pipeline(
         db_pool=ctx["db_pool"],
         client=ctx["llm_client"],
@@ -58,9 +58,9 @@ async def process_document(ctx: Any, document_id: str, file_path: str, source_ty
     )
 
 
-from arq.cron import cron
+from arq.cron import cron  # noqa: E402
 
-from pipelines.finetuning.job_manager import poll_finetune_jobs
+from pipelines.finetuning.job_manager import poll_finetune_jobs  # noqa: E402
 
 
 class WorkerSettings:

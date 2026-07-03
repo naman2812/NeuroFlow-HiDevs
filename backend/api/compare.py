@@ -24,7 +24,7 @@ class CompareRequest(BaseModel):
     pipeline_b_id: UUID
 
 
-async def get_redis() -> Any:
+async def get_redis() -> Any:  # noqa: ANN401
     return aioredis.from_url(
         f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
         decode_responses=True,
@@ -32,7 +32,7 @@ async def get_redis() -> Any:
 
 
 async def run_pipeline(
-    pool: Any, redis_client: Any, pipeline_id: UUID, query: str
+    pool: Any, redis_client: Any, pipeline_id: UUID, query: str  # noqa: ANN401
 ) -> dict[str, Any]:
     # Fetch pipeline version and config to associate with run
     pipeline_config = None
@@ -113,7 +113,7 @@ async def run_pipeline(
 
 
 @router.post("")
-async def compare_pipelines(req: CompareRequest) -> Any:
+async def compare_pipelines(req: CompareRequest) -> Any:  # noqa: ANN401
     pool = get_pool()
     redis_client = await get_redis()
 

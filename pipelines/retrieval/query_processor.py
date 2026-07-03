@@ -29,7 +29,7 @@ You are an expert search query processing engine. Analyze the user's query and o
 4. "hypothetical_document": A detailed hypothetical passage or paragraph that directly answers the user's query. Write it in the tone and style of the documents that might contain the answer.
 
 Output ONLY valid JSON.
-"""
+"""  # noqa: E501
 
         messages = [
             ChatMessage(role="system", content=system_prompt),

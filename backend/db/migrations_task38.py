@@ -4,7 +4,7 @@ from typing import Any
 from backend.db.pool import create_pool, get_pool
 
 
-async def main() -> Any:
+async def main() -> Any:  # noqa: ANN401
     await create_pool()
     pool = get_pool()
     async with pool.acquire() as conn:

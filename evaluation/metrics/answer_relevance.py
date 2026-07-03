@@ -3,7 +3,7 @@ from backend.providers.client import NeuroFlowClient
 from backend.providers.base import ChatMessage
 from backend.providers.router import RoutingCriteria
 
-async def evaluate_answer_relevance(query: str, answer: str, client: NeuroFlowClient, **kwargs) -> float:
+async def evaluate_answer_relevance(query: str, answer: str, client: NeuroFlowClient, **kwargs) -> float:  # type: ignore
     if not answer or not answer.strip():
         return 0.0
 

@@ -10,7 +10,7 @@ from docx.text.paragraph import Paragraph
 from .base import ExtractedPage
 
 
-def iter_block_items(parent: Any) -> Any:
+def iter_block_items(parent: Any) -> Any:  # noqa: ANN401
     """
     Yield each paragraph and table child within *parent*, in document order.
     Each returned value is an instance of either Table or Paragraph.
@@ -38,7 +38,7 @@ def extract_docx(file_path: str) -> list[ExtractedPage]:
     current_content = []  # type: ignore
     page_counter = 1
 
-    def flush() -> Any:
+    def flush() -> Any:  # noqa: ANN401
         nonlocal current_content, page_counter
         if current_content:
             text = "\n".join(current_content).strip()

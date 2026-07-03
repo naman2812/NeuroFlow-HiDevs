@@ -42,7 +42,7 @@ class EvaluationConfig(BaseModel):
     training_threshold: float
 
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field  # noqa: E402
 
 
 class PipelineConfig(BaseModel):

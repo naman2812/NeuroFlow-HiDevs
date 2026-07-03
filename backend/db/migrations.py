@@ -4,7 +4,7 @@ from typing import Any
 from backend.db.pool import get_pool
 
 
-async def run_migrations() -> Any:
+async def run_migrations() -> Any:  # noqa: ANN401
     pool = get_pool()
     schema_path = os.path.join(
         os.path.dirname(__file__), "..", "..", "infra", "init", "001_schema.sql"
@@ -12,13 +12,13 @@ async def run_migrations() -> Any:
 
     # Read the schema file
     try:
-        with open(schema_path) as f:
+        with open(schema_path) as f:  # noqa: ASYNC230
             schema_sql = f.read()
     except Exception as e:
         print(f"Error reading schema file: {e}")
         return
 
-    # In a real app we'd use Alembic or similar, but for now we'll just check if the documents table exists
+    # In a real app we'd use Alembic or similar, but for now we'll just check if the documents table exists  # noqa: E501
     async with pool.acquire() as conn:
         try:
             # Check if applied

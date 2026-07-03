@@ -12,7 +12,7 @@ from backend.config import settings
 _redis_client = None
 
 
-def get_redis_client() -> Any:
+def get_redis_client() -> Any:  # noqa: ANN401
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
@@ -58,7 +58,7 @@ end
 """
 
 
-async def wait_for_token(key: str, capacity: int, refill_rate: float, max_wait: int = 30) -> Any:
+async def wait_for_token(key: str, capacity: int, refill_rate: float, max_wait: int = 30) -> Any:  # noqa: ANN401
     client = get_redis_client()
     start_time = time.time()
 
@@ -72,7 +72,7 @@ async def wait_for_token(key: str, capacity: int, refill_rate: float, max_wait: 
     raise TimeoutError(f"Rate limit token wait timeout exceeded for {key}")
 
 
-async def consume_llm_token(provider: str) -> Any:
+async def consume_llm_token(provider: str) -> Any:  # noqa: ANN401
     if provider == "openai":
         capacity = 3000
         refill_rate = 50.0
@@ -87,7 +87,7 @@ async def consume_llm_token(provider: str) -> Any:
     await wait_for_token(key, capacity, refill_rate)
 
 
-async def consume_pipeline_token(pipeline_id: str, rpm: int) -> Any:
+async def consume_pipeline_token(pipeline_id: str, rpm: int) -> Any:  # noqa: ANN401
     key = f"rpb:pipeline:{pipeline_id}:tokens"
     capacity = rpm
     refill_rate = rpm / 60.0
@@ -122,8 +122,8 @@ end
 """
 
 
-def rate_limit_endpoint(max_requests: int, window_seconds: int) -> Any:
-    async def dependency(request: Request) -> Any:
+def rate_limit_endpoint(max_requests: int, window_seconds: int) -> Any:  # noqa: ANN401
+    async def dependency(request: Request) -> Any:  # noqa: ANN401
         client = get_redis_client()
         ip = request.client.host if request.client else "unknown"
         endpoint = request.url.path

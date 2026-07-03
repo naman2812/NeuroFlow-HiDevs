@@ -5,7 +5,7 @@ import sys
 def run() -> None:
     if len(sys.argv) < 4:
         print(
-            "Usage: python -m pipelines.ingestion.sandbox_extractor <file_path> <source_type> <output_path>"
+            "Usage: python -m pipelines.ingestion.sandbox_extractor <file_path> <source_type> <output_path>"  # noqa: E501
         )
         sys.exit(1)
 

@@ -29,7 +29,7 @@ def extract_csv(file_path: str) -> list[ExtractedPage]:
     else:
         # Generate statistical summary
         summary_lines = [
-            f"# Dataset Summary\n**Total Rows**: {total_rows}\n**Total Columns**: {len(df.columns)}\n"
+            f"# Dataset Summary\n**Total Rows**: {total_rows}\n**Total Columns**: {len(df.columns)}\n"  # noqa: E501
         ]
 
         for col in df.columns:

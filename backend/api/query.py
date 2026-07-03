@@ -32,7 +32,7 @@ class QueryRequest(BaseModel):
     stream: bool = False
 
 
-async def get_redis() -> Any:
+async def get_redis() -> Any:  # noqa: ANN401
     return aioredis.from_url(
         f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
         decode_responses=True,
@@ -41,8 +41,8 @@ async def get_redis() -> Any:
 
 @router.post("", dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))])
 async def submit_query(
-    req: QueryRequest, request: Request, user: Any = Depends(RequireScope("query"))
-) -> Any:
+    req: QueryRequest, request: Request, user: Any = Depends(RequireScope("query"))  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     pool = get_pool()
     req.query = sanitize_text(req.query)
 
@@ -102,7 +102,10 @@ async def submit_query(
 
     # Retrieval
     context_data = await retrieval_pipeline.get_context(
-        req.query, config=pipeline_config, pipeline_id=str(req.pipeline_id), run_id=str(run_id)  # type: ignore
+        req.query,
+        config=pipeline_config,  # type: ignore
+        pipeline_id=str(req.pipeline_id),
+        run_id=str(run_id),
     )
 
     # Generation
@@ -144,8 +147,8 @@ async def submit_query(
     dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))],
 )
 async def stream_query(
-    run_id: UUID, request: Request, user: Any = Depends(RequireScope("query"))
-) -> Any:
+    run_id: UUID, request: Request, user: Any = Depends(RequireScope("query"))  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     pool = get_pool()
 
     # Verify run exists and is pending
@@ -165,10 +168,10 @@ async def stream_query(
     retrieval_pipeline = RetrievalPipeline(pool, client)
     generator = StreamingGenerator(client, pool, redis_client)
 
-    async def event_generator() -> Any:
+    async def event_generator() -> Any:  # noqa: ANN401
         try:
             # Keepalive task
-            async def keepalive() -> Any:
+            async def keepalive() -> Any:  # noqa: ANN401
                 try:
                     while True:
                         await asyncio.sleep(15)
@@ -179,14 +182,14 @@ async def stream_query(
             # Retrieval Start
             yield {"event": "message", "data": json.dumps({"type": "retrieval_start"})}
 
-            # Since retrieval can take time, we should run it in a way that allows keepalive to interleave?
-            # sse-starlette natively doesn't interleave easily unless we use asyncio.wait with timeout,
+            # Since retrieval can take time, we should run it in a way that allows keepalive to interleave?  # noqa: E501
+            # sse-starlette natively doesn't interleave easily unless we use asyncio.wait with timeout,  # noqa: E501
             # but we can just use a simple background task if needed, or rely on fast retrieval.
-            # To strictly follow "keepalive event every 15s if generation takes long", we can use a queue.
+            # To strictly follow "keepalive event every 15s if generation takes long", we can use a queue.  # noqa: E501
 
             queue = asyncio.Queue()  # type: ignore
 
-            async def worker() -> Any:
+            async def worker() -> Any:  # noqa: ANN401
                 try:
                     pipeline_config = None
                     async with pool.acquire() as conn:

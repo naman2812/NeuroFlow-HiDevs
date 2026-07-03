@@ -60,7 +60,7 @@ class Chunker:
         self._renumber_chunks(chunks)
         return chunks
 
-    def _renumber_chunks(self, chunks: list[Chunk]) -> Any:
+    def _renumber_chunks(self, chunks: list[Chunk]) -> Any:  # noqa: ANN401
         for i, c in enumerate(chunks):
             c.chunk_index = i
 

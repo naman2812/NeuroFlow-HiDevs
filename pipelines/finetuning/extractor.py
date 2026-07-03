@@ -16,7 +16,7 @@ CITATION_REGEX = re.compile(r"\[Source \d+\]")
 
 
 class FineTuneExtractor:
-    def __init__(self, db_pool: Any, redis_client: Any = None) -> None:
+    def __init__(self, db_pool: Any, redis_client: Any = None) -> None:  # noqa: ANN401
         self.db_pool = db_pool
         self.client = NeuroFlowClient(redis_client) if redis_client else None
         self.encoding = tiktoken.get_encoding("cl100k_base")
@@ -33,7 +33,7 @@ class FineTuneExtractor:
               AND tp.included_in_job IS NULL
               AND (e.user_rating >= 4 OR e.user_rating IS NULL)
             LIMIT $1
-        """
+        """  # noqa: E501
         async with self.db_pool.acquire() as conn:
             records = await conn.fetch(query, limit)
 
@@ -165,7 +165,7 @@ class FineTuneExtractor:
         # Write to JSONL
         os.makedirs("training_data", exist_ok=True)
         file_path = f"training_data/{job_id}.jsonl"
-        with open(file_path, "w", encoding="utf-8") as f:
+        with open(file_path, "w", encoding="utf-8") as f:  # noqa: ASYNC230
             for pair in valid_pairs:
                 if format == "dpo":
                     prompt = pair["prompt"]

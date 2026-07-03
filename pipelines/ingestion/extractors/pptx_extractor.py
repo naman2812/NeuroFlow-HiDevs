@@ -65,7 +65,7 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[Extracte
                             content=[
                                 {
                                     "type": "text",
-                                    "text": "Provide a highly detailed description of this image or diagram from a presentation slide.",
+                                    "text": "Provide a highly detailed description of this image or diagram from a presentation slide.",  # noqa: E501
                                 },
                                 {
                                     "type": "image_url",

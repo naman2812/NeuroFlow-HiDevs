@@ -31,13 +31,13 @@ try:
 except Exception:
     pass
 
-import asyncio
+import asyncio  # noqa: E402
 
-from backend.api.evaluations import process_evaluation_queue
+from backend.api.evaluations import process_evaluation_queue  # noqa: E402
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
+async def lifespan(app: FastAPI) -> Any:  # noqa: ANN401
     # Startup
     await create_pool()
     await run_migrations()
@@ -51,12 +51,12 @@ async def lifespan(app: FastAPI) -> Any:
     await close_pool()
 
 
-from fastapi import Depends
+from fastapi import Depends  # noqa: E402
 
-from backend.api import auth, compare, evaluations, finetune, ingest, pipelines, query
-from backend.api.runs import router as runs_router
-from backend.security.auth import get_current_user
-from backend.security.middleware import SecurityHeadersMiddleware
+from backend.api import auth, compare, evaluations, finetune, ingest, pipelines, query  # noqa: E402
+from backend.api.runs import router as runs_router  # noqa: E402
+from backend.security.auth import get_current_user  # noqa: E402
+from backend.security.middleware import SecurityHeadersMiddleware  # noqa: E402
 
 app = FastAPI(title="NeuroFlow API", lifespan=lifespan)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -78,7 +78,7 @@ FastAPIInstrumentor.instrument_app(app)
 
 
 @app.get("/health")
-async def health_check() -> Any:
+async def health_check() -> Any:  # noqa: ANN401
     pg_res = await check_postgres()
     redis_res = await check_redis()
     mlflow_res = await check_mlflow()
@@ -144,7 +144,7 @@ async def health_check() -> Any:
 
 
 @app.get("/metrics")
-async def metrics() -> Any:
+async def metrics() -> Any:  # noqa: ANN401
     # Prometheus text format
     data = generate_latest()
     return Response(content=data, media_type=CONTENT_TYPE_LATEST)

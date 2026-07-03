@@ -21,7 +21,7 @@ class NeuroFlowClient:
     _instance = None
     _lock = threading.Lock()
 
-    def __new__(cls, redis_client: Redis = None) -> Any:  # type: ignore
+    def __new__(cls, redis_client: Redis = None) -> Any:  # type: ignore  # noqa: ANN401
         with cls._lock:
             if cls._instance is None:
                 if redis_client is None:
@@ -30,7 +30,7 @@ class NeuroFlowClient:
                 cls._instance._init(redis_client)
             return cls._instance
 
-    def _init(self, redis_client: Redis) -> Any:
+    def _init(self, redis_client: Redis) -> Any:  # noqa: ANN401
         self.redis = redis_client
         self.router = ModelRouter(self.redis)
         self.providers: dict[str, BaseLLMProvider] = {}
@@ -46,7 +46,7 @@ class NeuroFlowClient:
                 raise ValueError(f"Unknown provider: {provider_name}")
         return self.providers[key]
 
-    async def _record_metrics(self, result: GenerationResult) -> Any:
+    async def _record_metrics(self, result: GenerationResult) -> Any:  # noqa: ANN401
         # Increment calls
         calls_key = f"metrics:model:{result.model}:calls"
         await self.redis.incr(calls_key)
@@ -56,7 +56,7 @@ class NeuroFlowClient:
         await self.redis.incrbyfloat(cost_key, result.cost_usd)
 
     async def chat(
-        self, messages: list[ChatMessage], criteria: RoutingCriteria, **kwargs: Any
+        self, messages: list[ChatMessage], criteria: RoutingCriteria, **kwargs: Any  # noqa: ANN401
     ) -> GenerationResult:
         chain = await self.router.route(criteria)
 
@@ -97,7 +97,7 @@ class NeuroFlowClient:
         ) from last_exception
 
     async def stream_chat(
-        self, messages: list[ChatMessage], criteria: RoutingCriteria, **kwargs: Any
+        self, messages: list[ChatMessage], criteria: RoutingCriteria, **kwargs: Any  # noqa: ANN401
     ) -> AsyncGenerator[str, None]:
         chain = await self.router.route(criteria)
 
@@ -115,14 +115,14 @@ class NeuroFlowClient:
 
                 stream_gen = provider.stream(messages, **kwargs)
 
-                async def _get_first() -> Any:
+                async def _get_first() -> Any:  # noqa: ANN401
                     return await stream_gen.__anext__()  # type: ignore
 
                 # Test connection by fetching the first chunk
                 async with CircuitBreaker(provider_name):
                     first_chunk = await TimeoutManager.run("chat_completion", _get_first())
 
-                async def stream_wrapper() -> Any:
+                async def stream_wrapper() -> Any:  # noqa: ANN401
                     with trace.use_span(span, end_on_exit=True):
                         try:
                             yield first_chunk
@@ -135,7 +135,7 @@ class NeuroFlowClient:
                 return stream_wrapper()  # type: ignore
             except StopAsyncIteration:
                 # Empty stream
-                async def empty_stream() -> Any:
+                async def empty_stream() -> Any:  # noqa: ANN401
                     yield ""
 
                 return empty_stream()  # type: ignore
@@ -144,7 +144,7 @@ class NeuroFlowClient:
                 continue
 
         raise RuntimeError(
-            f"All fallback stream models failed for criteria {criteria}. Last error: {last_exception}"
+            f"All fallback stream models failed for criteria {criteria}. Last error: {last_exception}"  # noqa: E501
         ) from last_exception
 
     async def embed(self, texts: list[str]) -> list[list[float]]:

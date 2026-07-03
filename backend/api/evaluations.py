@@ -17,12 +17,12 @@ router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
 
 @router.get("/stream")
-async def stream_evaluations(request: Request) -> Any:
+async def stream_evaluations(request: Request) -> Any:  # noqa: ANN401
     """
     Subscribe to real-time evaluations using SSE.
     """
 
-    async def event_generator() -> Any:
+    async def event_generator() -> Any:  # noqa: ANN401
         r = aioredis.from_url(
             f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
             decode_responses=True,
@@ -49,10 +49,10 @@ async def stream_evaluations(request: Request) -> Any:
     return EventSourceResponse(event_generator())
 
 
-import uuid
-from datetime import datetime
+import uuid  # noqa: E402
+from datetime import datetime  # noqa: E402
 
-from pydantic import BaseModel
+from pydantic import BaseModel  # noqa: E402
 
 
 class SimulateEval(BaseModel):
@@ -61,7 +61,7 @@ class SimulateEval(BaseModel):
 
 
 @router.post("/simulate")
-async def simulate_eval(req: SimulateEval) -> Any:
+async def simulate_eval(req: SimulateEval) -> Any:  # noqa: ANN401
     # Simulate a run ID and random metrics
     import random
 
@@ -118,7 +118,7 @@ async def simulate_eval(req: SimulateEval) -> Any:
 
 
 @router.get("")
-async def list_evaluations(limit: int = 50, offset: int = 0) -> Any:
+async def list_evaluations(limit: int = 50, offset: int = 0) -> Any:  # noqa: ANN401
     from backend.db.pool import get_pool
 
     pool = get_pool()
@@ -130,7 +130,7 @@ async def list_evaluations(limit: int = 50, offset: int = 0) -> Any:
 
 
 @router.get("/{run_id}")
-async def get_evaluation(run_id: uuid.UUID) -> Any:
+async def get_evaluation(run_id: uuid.UUID) -> Any:  # noqa: ANN401
     from fastapi import HTTPException
 
     from backend.db.pool import get_pool
@@ -147,7 +147,7 @@ async def get_evaluation(run_id: uuid.UUID) -> Any:
         return eval_dict
 
 
-async def process_evaluation_queue() -> Any:
+async def process_evaluation_queue() -> Any:  # noqa: ANN401
     import random
 
     r = aioredis.from_url(
@@ -233,7 +233,7 @@ async def process_evaluation_queue() -> Any:
                                 """
                                 INSERT INTO evaluations (run_id, faithfulness, answer_relevance, context_precision, context_recall, overall_score)
                                 VALUES ($1, $2, $3, $4, $5, $6)
-                                """,
+                                """,  # noqa: E501
                                 uuid.UUID(run_id),
                                 faithfulness,
                                 answer_relevance,
@@ -269,7 +269,7 @@ async def process_evaluation_queue() -> Any:
                                     import httpx
 
                                     async with httpx.AsyncClient() as client:
-                                        # Use HTTP POST as requested (point to api service for docker network, fallback to localhost)
+                                        # Use HTTP POST as requested (point to api service for docker network, fallback to localhost)  # noqa: E501
                                         api_host = (
                                             "api"
                                             if settings.postgres_host == "postgres"
@@ -285,7 +285,7 @@ async def process_evaluation_queue() -> Any:
                                         """
                                         INSERT INTO pipeline_anomalies (pipeline_id, run_id, score, rolling_mean, rolling_stddev, suggestions)
                                         VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-                                        """,
+                                        """,  # noqa: E501
                                         uuid.UUID(pipeline_id),
                                         uuid.UUID(run_id),
                                         overall_score,

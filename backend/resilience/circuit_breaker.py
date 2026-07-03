@@ -14,7 +14,7 @@ class CircuitOpenError(Exception):
 _redis_client = None
 
 
-def get_redis_client() -> Any:
+def get_redis_client() -> Any:  # noqa: ANN401
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
@@ -44,7 +44,7 @@ class CircuitBreaker:
 
         self.redis = get_redis_client()
 
-    async def __aenter__(self) -> Any:
+    async def __aenter__(self) -> Any:  # noqa: ANN401
         state = await self.redis.get(self.state_key) or "closed"
 
         if state == "open":
@@ -71,7 +71,7 @@ class CircuitBreaker:
 
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Any:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Any:  # noqa: ANN401
         if exc_type is None:
             # Success
             state = await self.redis.get(self.state_key)

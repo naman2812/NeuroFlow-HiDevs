@@ -138,7 +138,7 @@ class Retriever:
                         WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $1)
                         ORDER BY score DESC
                         LIMIT $2
-                        """,
+                        """,  # noqa: E501
                         q,
                         k,
                     )

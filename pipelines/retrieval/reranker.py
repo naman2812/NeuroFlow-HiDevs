@@ -52,7 +52,7 @@ class CrossEncoderReranker:
             return scored_candidates
 
     async def _score_candidate(self, query: str, result: RetrievalResult) -> RetrievalResult:
-        prompt = f"Rate the relevance of this passage to the query on a scale of 0-10. Query: {query}. Passage: {result.content}. Return only the number."
+        prompt = f"Rate the relevance of this passage to the query on a scale of 0-10. Query: {query}. Passage: {result.content}. Return only the number."  # noqa: E501
 
         messages = [ChatMessage(role="user", content=prompt)]
 

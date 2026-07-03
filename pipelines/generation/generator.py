@@ -19,7 +19,7 @@ tracer = trace.get_tracer(__name__)
 
 
 class StreamingGenerator:
-    def __init__(self, client: NeuroFlowClient, db_pool: Any, redis_client: Any) -> None:
+    def __init__(self, client: NeuroFlowClient, db_pool: Any, redis_client: Any) -> None:  # noqa: ANN401
         self.client = client
         self.db_pool = db_pool
         self.redis = redis_client
@@ -71,9 +71,9 @@ class StreamingGenerator:
 
             criteria = RoutingCriteria(task_type=task_type, max_cost_per_call=max_cost)
 
-            # Override client stream_chat temperature if supported? The provider interface usually relies on kwargs.
+            # Override client stream_chat temperature if supported? The provider interface usually relies on kwargs.  # noqa: E501
             # We can pass temperature as kwargs to stream_chat in NeuroFlowClient.
-            # Actually our NeuroFlowClient.stream_chat(messages, criteria, **kwargs) handles extra kwargs.
+            # Actually our NeuroFlowClient.stream_chat(messages, criteria, **kwargs) handles extra kwargs.  # noqa: E501
             stream_gen = await self.client.stream_chat(messages, criteria, temperature=temperature)
 
             full_response = []
@@ -136,7 +136,7 @@ class StreamingGenerator:
                                     buffer = ""
                                     break
 
-                # Assume NeuroFlowClient tracks provider/model somewhere or we use generic. We'll use criteria task_type
+                # Assume NeuroFlowClient tracks provider/model somewhere or we use generic. We'll use criteria task_type  # noqa: E501
                 lm_calls_total.labels(provider="routed", model="routed", task_type=task_type).inc()
 
             duration = time.time() - start_time
@@ -149,7 +149,7 @@ class StreamingGenerator:
             input_tokens = len(self.tokenizer.encode(prompt))
             output_tokens = len(self.tokenizer.encode(final_text))
 
-            # Approximate cost tracking based on standard GPT-3.5 turbo rates ($0.0015/1K in, $0.002/1K out)
+            # Approximate cost tracking based on standard GPT-3.5 turbo rates ($0.0015/1K in, $0.002/1K out)  # noqa: E501
             approx_cost = (input_tokens / 1000 * 0.0015) + (output_tokens / 1000 * 0.002)
             llm_cost.labels(model=task_type).observe(approx_cost)
 
@@ -171,7 +171,7 @@ class StreamingGenerator:
                         UPDATE pipeline_runs 
                         SET generation = $1, input_tokens = $2, output_tokens = $3, latency_ms = $4, status = 'complete', metadata = $5
                         WHERE id = $6
-                        """,
+                        """,  # noqa: E501
                         clean_text,
                         input_tokens,
                         output_tokens,

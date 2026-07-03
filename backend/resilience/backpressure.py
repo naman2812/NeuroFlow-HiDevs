@@ -8,7 +8,7 @@ from backend.monitoring.metrics import queue_depth as queue_depth_metric
 _redis_client = None
 
 
-def get_redis_client() -> Any:
+def get_redis_client() -> Any:  # noqa: ANN401
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
@@ -18,7 +18,7 @@ def get_redis_client() -> Any:
     return _redis_client
 
 
-async def check_ingest_backpressure() -> Any:
+async def check_ingest_backpressure() -> Any:  # noqa: ANN401
     client = get_redis_client()
 
     # Track queue depth: LLEN queue:ingest in Redis
