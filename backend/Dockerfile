@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y \
     libmagic1 \
     docker.io \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir --upgrade pip wheel setuptools
 
 RUN groupadd -r neuroflow && useradd -r -g neuroflow neuroflow
 WORKDIR /app
