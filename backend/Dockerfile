@@ -1,21 +1,23 @@
 # Stage 1: Dependencies
-FROM python:3.11-alpine AS deps
+FROM python:3.11-slim AS deps
 WORKDIR /app
-RUN apk add --no-cache \
-    build-base \
-    postgresql-dev
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt .
 RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime (minimal, non-root)
-FROM python:3.11-alpine AS runtime
-RUN apk add --no-cache \
+FROM python:3.11-slim AS runtime
+RUN apt-get update && apt-get install -y \
     tesseract-ocr \
-    libmagic \
-    docker \
-    curl
+    libmagic1 \
+    docker.io \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -S neuroflow && adduser -S -G neuroflow neuroflow
+RUN groupadd -r neuroflow && useradd -r -g neuroflow neuroflow
 WORKDIR /app
 
 COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
