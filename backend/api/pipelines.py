@@ -116,7 +116,9 @@ async def get_pipeline(id: UUID = Path(...)) -> Any:  # noqa: ANN401
 
 @router.patch("/{id}")
 async def update_pipeline(
-    data: PipelineUpdate, id: UUID = Path(...), user: Any = Depends(RequireScope("admin"))  # noqa: ANN401
+    data: PipelineUpdate,
+    id: UUID = Path(...),
+    user: Any = Depends(RequireScope("admin")),  # noqa: ANN401
 ) -> Any:  # noqa: ANN401
     pool = get_pool()
     data.config.name = sanitize_text(data.config.name)

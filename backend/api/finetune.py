@@ -94,7 +94,8 @@ async def create_finetune_job(
 
 @router.get("/jobs")
 async def list_finetune_jobs(
-    db_pool: Any = Depends(get_pool), user: Any = Depends(RequireScope("admin"))  # noqa: ANN401
+    db_pool: Any = Depends(get_pool),  # noqa: ANN401
+    user: Any = Depends(RequireScope("admin")),  # noqa: ANN401
 ) -> Any:  # noqa: ANN401
     async with db_pool.acquire() as conn:
         records = await conn.fetch(
@@ -105,7 +106,9 @@ async def list_finetune_jobs(
 
 @router.get("/jobs/{job_id}")
 async def get_finetune_job(
-    job_id: UUID, db_pool: Any = Depends(get_pool), user: Any = Depends(RequireScope("admin"))  # noqa: ANN401
+    job_id: UUID,
+    db_pool: Any = Depends(get_pool),  # noqa: ANN401
+    user: Any = Depends(RequireScope("admin")),  # noqa: ANN401
 ) -> Any:  # noqa: ANN401
     async with db_pool.acquire() as conn:
         record = await conn.fetchrow("SELECT * FROM finetune_jobs WHERE id = $1", job_id)
