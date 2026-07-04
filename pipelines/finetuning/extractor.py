@@ -97,7 +97,7 @@ class FineTuneExtractor:
             context = "\n".join([r["content"] for r in chunk_rows])
 
         try:
-            faithfulness = await evaluate_faithfulness(  # type: ignore
+            faithfulness = await evaluate_faithfulness(
                 query=user_msg, answer=assistant_msg, context=context, client=self.client
             )
         except Exception:

@@ -19,7 +19,7 @@ class Chunk:
 
 
 class Chunker:
-    def __init__(self, client: NeuroFlowClient | None = None) -> None:  # type: ignore
+    def __init__(self, client: NeuroFlowClient | None = None) -> None:
         self.encoder = tiktoken.get_encoding("cl100k_base")
         self.client = client
 
