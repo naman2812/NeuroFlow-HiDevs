@@ -47,7 +47,7 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[Extracte
                     max_size = 1024
                     if max(processed_img.size) > max_size:
                         ratio = max_size / max(processed_img.size)
-                        new_size = (int(processed_img.width * ratio), int(processed_img.height * ratio))
+                        new_size = (int(processed_img.width * ratio), int(processed_img.height * ratio))  # noqa: E501
                         processed_img = processed_img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
 
                     buffered = io.BytesIO()
