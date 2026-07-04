@@ -1,24 +1,30 @@
-from fastapi import APIRouter, HTTPException, Query, Path
-from uuid import UUID
-from typing import List, Optional
 import json
+from typing import Any
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from backend.db.pool import get_pool
-from backend.models.pipeline import PipelineConfig, PipelineCreate, PipelineUpdate, PipelineResponse, PipelineRunResponse
-from backend.security.prompt_injection import sanitize_text
+from backend.models.pipeline import (
+    PipelineCreate,
+    PipelineResponse,
+    PipelineRunResponse,
+    PipelineUpdate,
+)
 from backend.security.auth import RequireScope
-from fastapi import Depends
+from backend.security.prompt_injection import sanitize_text
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
+
 @router.post("", response_model=PipelineResponse)
-async def create_pipeline(data: PipelineCreate, user=Depends(RequireScope("admin"))):
+async def create_pipeline(data: PipelineCreate, user: Any = Depends(RequireScope("admin"))) -> Any:  # noqa: ANN401
     pool = get_pool()
     data.config.name = sanitize_text(data.config.name)
     data.config.description = sanitize_text(data.config.description)
     config_json = data.config.model_dump_json()
     name = data.config.name
-    
+
     async with pool.acquire() as conn:
         try:
             row = await conn.fetchrow(
@@ -27,27 +33,32 @@ async def create_pipeline(data: PipelineCreate, user=Depends(RequireScope("admin
                 VALUES ($1, $2::jsonb, 1, 'active')
                 RETURNING *
                 """,
-                name, config_json
+                name,
+                config_json,
             )
-            
+
             await conn.execute(
                 """
                 INSERT INTO pipeline_versions (pipeline_id, version, config)
                 VALUES ($1, 1, $2::jsonb)
                 """,
-                row["id"], config_json
+                row["id"],
+                config_json,
             )
         except Exception as e:
             if "unique constraint" in str(e).lower():
-                raise HTTPException(status_code=400, detail="Pipeline with this name already exists")
+                raise HTTPException(
+                    status_code=400, detail="Pipeline with this name already exists"
+                )
             raise HTTPException(status_code=500, detail=str(e))
-            
+
     res_dict = dict(row)
     res_dict["config"] = json.loads(res_dict["config"])
     return PipelineResponse(**res_dict)
 
+
 @router.get("")
-async def list_pipelines():
+async def list_pipelines() -> Any:  # noqa: ANN401
     pool = get_pool()
     async with pool.acquire() as conn:
         # GET /pipelines — list all pipelines with last-run metrics
@@ -67,12 +78,13 @@ async def list_pipelines():
             LEFT JOIN evaluations e ON e.run_id = pr.id
             WHERE p.status != 'archived'
             ORDER BY p.created_at DESC
-            """
+            """  # noqa: E501
         )
         return [dict(r) for r in records]
 
+
 @router.get("/{id}")
-async def get_pipeline(id: UUID = Path(...)):
+async def get_pipeline(id: UUID = Path(...)) -> Any:  # noqa: ANN401
     pool = get_pool()
     async with pool.acquire() as conn:
         # Full config and aggregate evaluation scores
@@ -90,29 +102,36 @@ async def get_pipeline(id: UUID = Path(...)):
             WHERE p.id = $1 AND p.status != 'archived'
             GROUP BY p.id
             """,
-            id
+            id,
         )
         if not row:
             raise HTTPException(status_code=404, detail="Pipeline not found or archived")
-            
+
         res = dict(row)
-        res["config"] = json.loads(res["config"]) if isinstance(res["config"], str) else res["config"]
+        res["config"] = (
+            json.loads(res["config"]) if isinstance(res["config"], str) else res["config"]
+        )
         return res
 
+
 @router.patch("/{id}")
-async def update_pipeline(data: PipelineUpdate, id: UUID = Path(...), user=Depends(RequireScope("admin"))):
+async def update_pipeline(
+    data: PipelineUpdate, id: UUID = Path(...), user: Any = Depends(RequireScope("admin"))  # noqa: ANN401
+) -> Any:  # noqa: ANN401
     pool = get_pool()
     data.config.name = sanitize_text(data.config.name)
     data.config.description = sanitize_text(data.config.description)
     config_json = data.config.model_dump_json()
-    
+
     async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT version FROM pipelines WHERE id = $1 AND status != 'archived'", id)
+        row = await conn.fetchrow(
+            "SELECT version FROM pipelines WHERE id = $1 AND status != 'archived'", id
+        )
         if not row:
             raise HTTPException(status_code=404, detail="Pipeline not found or archived")
-            
+
         new_version = row["version"] + 1
-        
+
         updated_row = await conn.fetchrow(
             """
             UPDATE pipelines 
@@ -120,36 +139,43 @@ async def update_pipeline(data: PipelineUpdate, id: UUID = Path(...), user=Depen
             WHERE id = $3
             RETURNING *
             """,
-            config_json, new_version, id
+            config_json,
+            new_version,
+            id,
         )
-        
+
         await conn.execute(
             """
             INSERT INTO pipeline_versions (pipeline_id, version, config)
             VALUES ($1, $2, $3::jsonb)
             """,
-            id, new_version, config_json
+            id,
+            new_version,
+            config_json,
         )
-        
+
     res_dict = dict(updated_row)
     res_dict["config"] = json.loads(res_dict["config"])
     return PipelineResponse(**res_dict)
 
+
 @router.delete("/{id}")
-async def delete_pipeline(id: UUID = Path(...), user=Depends(RequireScope("admin"))):
+async def delete_pipeline(id: UUID = Path(...), user: Any = Depends(RequireScope("admin"))) -> Any:  # noqa: ANN401
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "UPDATE pipelines SET status = 'archived' WHERE id = $1 RETURNING id",
-            id
+            "UPDATE pipelines SET status = 'archived' WHERE id = $1 RETURNING id", id
         )
         if not row:
             raise HTTPException(status_code=404, detail="Pipeline not found")
-            
+
     return {"status": "archived", "id": id}
 
-@router.get("/{id}/runs", response_model=List[PipelineRunResponse])
-async def list_pipeline_runs(id: UUID = Path(...), limit: int = Query(50), offset: int = Query(0)):
+
+@router.get("/{id}/runs", response_model=list[PipelineRunResponse])
+async def list_pipeline_runs(
+    id: UUID = Path(...), limit: int = Query(50), offset: int = Query(0)
+) -> Any:  # noqa: ANN401
     pool = get_pool()
     async with pool.acquire() as conn:
         records = await conn.fetch(
@@ -159,18 +185,21 @@ async def list_pipeline_runs(id: UUID = Path(...), limit: int = Query(50), offse
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
             """,
-            id, limit, offset
+            id,
+            limit,
+            offset,
         )
         return [PipelineRunResponse(**dict(r)) for r in records]
 
+
 @router.get("/{id}/analytics")
-async def get_pipeline_analytics(id: UUID = Path(...)):
+async def get_pipeline_analytics(id: UUID = Path(...)) -> Any:  # noqa: ANN401
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow("SELECT 1 FROM pipelines WHERE id = $1", id)
         if not row:
             raise HTTPException(status_code=404, detail="Pipeline not found")
-            
+
         stats = await conn.fetchrow(
             """
             SELECT 
@@ -186,11 +215,11 @@ async def get_pipeline_analytics(id: UUID = Path(...)):
             FROM pipeline_runs pr
             LEFT JOIN evaluations e ON e.run_id = pr.id
             WHERE pr.pipeline_id = $1
-            """,
-            id
+            """,  # noqa: E501
+            id,
         )
-        
-        # We need cost per query. Let's do an approximation based on token counts and model pricing logic.
+
+        # We need cost per query. Let's do an approximation based on token counts and model pricing logic.  # noqa: E501
         # "Cost per query (input_tokens * price + output_tokens * price)"
         # Assuming gpt-4o-mini prices: 0.15/1M input, 0.60/1M output
         cost_stats = await conn.fetchrow(
@@ -199,10 +228,10 @@ async def get_pipeline_analytics(id: UUID = Path(...)):
                 AVG((COALESCE(input_tokens, 0) * 0.15 / 1000000.0) + (COALESCE(output_tokens, 0) * 0.60 / 1000000.0)) as avg_cost_per_query
             FROM pipeline_runs
             WHERE pipeline_id = $1
-            """,
-            id
+            """,  # noqa: E501
+            id,
         )
-        
+
         daily_series = await conn.fetch(
             """
             SELECT date_trunc('day', created_at)::date as day, count(*) as query_count
@@ -211,23 +240,27 @@ async def get_pipeline_analytics(id: UUID = Path(...)):
             GROUP BY day
             ORDER BY day
             """,
-            id
+            id,
         )
-        
+
         res = dict(stats) if stats else {}
         if cost_stats:
             res["avg_cost_per_query"] = cost_stats["avg_cost_per_query"]
-            
+
         # Ensure daily series returns all 30 days (even empty ones) or just the sparkline points
         # For simplicity, returning just the populated points is often enough for a sparkline
-        res["daily_queries"] = [{"day": r["day"].isoformat(), "count": r["query_count"]} for r in daily_series]
-        
+        res["daily_queries"] = [
+            {"day": r["day"].isoformat(), "count": r["query_count"]} for r in daily_series
+        ]
+
         return res
 
-from backend.services.pipeline_optimizer import PipelineOptimizer
+
+from backend.services.pipeline_optimizer import PipelineOptimizer  # noqa: E402
+
 
 @router.post("/{id}/suggestions")
-async def get_pipeline_suggestions(id: UUID = Path(...)):
+async def get_pipeline_suggestions(id: UUID = Path(...)) -> Any:  # noqa: ANN401
     pool = get_pool()
     optimizer = PipelineOptimizer(pool)
     suggestions = await optimizer.get_suggestions(id)

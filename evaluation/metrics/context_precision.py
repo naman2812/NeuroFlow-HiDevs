@@ -2,7 +2,7 @@ from backend.providers.client import NeuroFlowClient
 from backend.providers.base import ChatMessage
 from backend.providers.router import RoutingCriteria
 
-async def evaluate_context_precision(query: str, chunks: list[str], answer: str, client: NeuroFlowClient, **kwargs) -> float:
+async def evaluate_context_precision(query: str, chunks: list[str], answer: str, client: NeuroFlowClient, **kwargs) -> float:  # type: ignore
     if not chunks:
         return 0.0
         

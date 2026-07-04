@@ -1,11 +1,13 @@
 import time
-import asyncpg
-import redis.asyncio as redis
+
 import httpx
+import redis.asyncio as redis
+
 from backend.config import settings
 from backend.db.pool import get_pool
 
-async def check_postgres() -> dict:
+
+async def check_postgres() -> dict:  # type: ignore
     start = time.perf_counter()
     pool = get_pool()
     if not pool:
@@ -18,13 +20,12 @@ async def check_postgres() -> dict:
     except Exception:
         return {"status": "error", "latency_ms": 0}
 
-async def check_redis() -> dict:
+
+async def check_redis() -> dict:  # type: ignore
     start = time.perf_counter()
     try:
         r = redis.Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            password=settings.redis_password
+            host=settings.redis_host, port=settings.redis_port, password=settings.redis_password
         )
         await r.ping()
         await r.close()
@@ -33,7 +34,8 @@ async def check_redis() -> dict:
     except Exception:
         return {"status": "error", "latency_ms": 0}
 
-async def check_mlflow() -> dict:
+
+async def check_mlflow() -> dict:  # type: ignore
     start = time.perf_counter()
     try:
         async with httpx.AsyncClient() as client:

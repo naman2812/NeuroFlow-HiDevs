@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt .
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip wheel setuptools && \
+    pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime (minimal, non-root)
 FROM python:3.11-slim AS runtime
@@ -15,7 +16,8 @@ RUN apt-get update && apt-get install -y \
     libmagic1 \
     docker.io \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir --upgrade pip wheel setuptools
 
 RUN groupadd -r neuroflow && useradd -r -g neuroflow neuroflow
 WORKDIR /app
