@@ -32,7 +32,10 @@ async def get_redis() -> Any:  # noqa: ANN401
 
 
 async def run_pipeline(
-    pool: Any, redis_client: Any, pipeline_id: UUID, query: str  # noqa: ANN401
+    pool: Any,  # noqa: ANN401
+    redis_client: Any,  # noqa: ANN401
+    pipeline_id: UUID,
+    query: str,
 ) -> dict[str, Any]:
     # Fetch pipeline version and config to associate with run
     pipeline_config = None
@@ -95,7 +98,7 @@ async def run_pipeline(
             )
 
         # Evaluation Job
-        judge = EvaluationJudge(pool, redis_client)  # type: ignore
+        judge = EvaluationJudge(pool, redis_client)
         eval_score = await judge.evaluate_run(str(run_id))
 
         return {

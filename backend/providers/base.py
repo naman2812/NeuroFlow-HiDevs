@@ -30,7 +30,9 @@ class BaseLLMProvider(ABC):
 
     @abstractmethod
     async def stream(
-        self, messages: list[ChatMessage], **kwargs: Any  # noqa: ANN401
+        self,
+        messages: list[ChatMessage],
+        **kwargs: Any,  # noqa: ANN401
     ) -> AsyncGenerator[str, None]: ...
 
     @abstractmethod

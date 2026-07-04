@@ -56,7 +56,10 @@ class NeuroFlowClient:
         await self.redis.incrbyfloat(cost_key, result.cost_usd)
 
     async def chat(
-        self, messages: list[ChatMessage], criteria: RoutingCriteria, **kwargs: Any  # noqa: ANN401
+        self,
+        messages: list[ChatMessage],
+        criteria: RoutingCriteria,
+        **kwargs: Any,  # noqa: ANN401
     ) -> GenerationResult:
         chain = await self.router.route(criteria)
 
@@ -97,7 +100,10 @@ class NeuroFlowClient:
         ) from last_exception
 
     async def stream_chat(
-        self, messages: list[ChatMessage], criteria: RoutingCriteria, **kwargs: Any  # noqa: ANN401
+        self,
+        messages: list[ChatMessage],
+        criteria: RoutingCriteria,
+        **kwargs: Any,  # noqa: ANN401
     ) -> AsyncGenerator[str, None]:
         chain = await self.router.route(criteria)
 

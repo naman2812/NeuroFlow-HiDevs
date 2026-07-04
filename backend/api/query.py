@@ -41,7 +41,9 @@ async def get_redis() -> Any:  # noqa: ANN401
 
 @router.post("", dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))])
 async def submit_query(
-    req: QueryRequest, request: Request, user: Any = Depends(RequireScope("query"))  # noqa: ANN401
+    req: QueryRequest,
+    request: Request,
+    user: Any = Depends(RequireScope("query")),  # noqa: ANN401
 ) -> Any:  # noqa: ANN401
     pool = get_pool()
     req.query = sanitize_text(req.query)
@@ -147,7 +149,9 @@ async def submit_query(
     dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))],
 )
 async def stream_query(
-    run_id: UUID, request: Request, user: Any = Depends(RequireScope("query"))  # noqa: ANN401
+    run_id: UUID,
+    request: Request,
+    user: Any = Depends(RequireScope("query")),  # noqa: ANN401
 ) -> Any:  # noqa: ANN401
     pool = get_pool()
 
