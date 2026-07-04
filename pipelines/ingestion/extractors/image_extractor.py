@@ -13,28 +13,29 @@ from .base import ExtractedPage
 
 async def extract_image(file_path: str, client: NeuroFlowClient) -> list[ExtractedPage]:
     with Image.open(file_path) as img:
+        processed_img = img
         # Resize to max 1024px on longest side
         max_size = 1024
-        if max(img.size) > max_size:
-            ratio = max_size / max(img.size)
-            new_size = (int(img.width * ratio), int(img.height * ratio))
-            img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
+        if max(processed_img.size) > max_size:
+            ratio = max_size / max(processed_img.size)
+            new_size = (int(processed_img.width * ratio), int(processed_img.height * ratio))
+            processed_img = processed_img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
 
         # Prepare for base64 encoding
         buffered = io.BytesIO()
-        img_format = img.format if img.format else "JPEG"
+        img_format = processed_img.format if processed_img.format else "JPEG"
 
         # Convert formats if necessary for LLM compatibility
-        if img.mode != "RGB":
-            img = img.convert("RGB")  # type: ignore
+        if processed_img.mode != "RGB":
+            processed_img = processed_img.convert("RGB")  # type: ignore
             img_format = "JPEG"
 
-        img.save(buffered, format=img_format)
+        processed_img.save(buffered, format=img_format)
         img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         mime_type = f"image/{img_format.lower()}"
 
         # 1. OCR text
-        ocr_text = pytesseract.image_to_string(img).strip()
+        ocr_text = pytesseract.image_to_string(processed_img).strip()
 
         # 2. Vision LLM description
         criteria = RoutingCriteria(task_type="classification", require_vision=True)

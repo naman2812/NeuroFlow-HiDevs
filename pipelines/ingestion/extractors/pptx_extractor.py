@@ -43,19 +43,20 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[Extracte
         for img_blob in images:
             try:
                 with Image.open(io.BytesIO(img_blob)) as img:
+                    processed_img = img
                     max_size = 1024
-                    if max(img.size) > max_size:
-                        ratio = max_size / max(img.size)
-                        new_size = (int(img.width * ratio), int(img.height * ratio))
-                        img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
+                    if max(processed_img.size) > max_size:
+                        ratio = max_size / max(processed_img.size)
+                        new_size = (int(processed_img.width * ratio), int(processed_img.height * ratio))
+                        processed_img = processed_img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
 
                     buffered = io.BytesIO()
-                    img_format = img.format if img.format else "JPEG"
-                    if img.mode != "RGB":
-                        img = img.convert("RGB")  # type: ignore
+                    img_format = processed_img.format if processed_img.format else "JPEG"
+                    if processed_img.mode != "RGB":
+                        processed_img = processed_img.convert("RGB")  # type: ignore
                         img_format = "JPEG"
 
-                    img.save(buffered, format=img_format)
+                    processed_img.save(buffered, format=img_format)
                     img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
                     mime_type = f"image/{img_format.lower()}"
 

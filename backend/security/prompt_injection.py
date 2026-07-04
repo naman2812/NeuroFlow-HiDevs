@@ -25,7 +25,7 @@ def sanitize_text(text: str) -> str:
     return bleach.clean(text, tags=[], strip=True)  # type: ignore
 
 
-def scan_for_prompt_injection(text: str) -> dict:  # type: ignore
+def scan_for_prompt_injection(text: str) -> dict | None:  # type: ignore
     """Layer 1: Pattern matching."""
     if not text:
         return None  # type: ignore

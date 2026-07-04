@@ -16,34 +16,8 @@ class EvaluationJudge:
         self.redis_client = redis_client
         self.client = NeuroFlowClient(redis_client)
         
-    async def evaluate_run(self, run_id: str):  # type: ignore
-        # Fetch the run data
-        async with self.db_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT query, retrieved_chunk_ids, generation, prompt FROM pipeline_runs WHERE id = $1",
-                UUID(run_id)
-            )
-            if not row:
-                print(f"Run {run_id} not found for evaluation.")
-                return
-                
-            query = row["query"]
-            generation = row["generation"]
-            prompt = row["prompt"]
-            chunk_ids = row["retrieved_chunk_ids"] or []
-            
-            # Fetch the chunks content
-            chunks = []
-            if chunk_ids:
-                records = await conn.fetch(
-                    "SELECT content FROM chunks WHERE id = ANY($1)",
-                    chunk_ids
-                )
-                chunks = [r["content"] for r in records]
-                
-        context = "\n".join(chunks)
-        
-    async def _run_metrics(self, query: str, generation: str, context: str, chunks: list, temperature: float = None):  # type: ignore
+
+    async def _run_metrics(self, query: str, generation: str, context: str, chunks: list, temperature: float | None = None):  # type: ignore
         kwargs = {"temperature": temperature} if temperature is not None else {}
         
         faithfulness_task = evaluate_faithfulness(query, generation, context, self.client, **kwargs)

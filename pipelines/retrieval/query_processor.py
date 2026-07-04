@@ -45,7 +45,7 @@ Output ONLY valid JSON.
             )
 
             # Extract JSON string (handling potential markdown blocks just in case)
-            content = result.message.content.strip()  # type: ignore
+            content = result.content.strip()
             if content.startswith("```json"):
                 content = content[7:-3].strip()
             elif content.startswith("```"):

@@ -48,7 +48,7 @@ class RetrievalPipeline:
     async def get_context(
         self,
         query: str,
-        config: dict[str, Any] = None,  # type: ignore
+        config: dict[str, Any] | None = None,
         k: int = 10,
         token_budget: int = 4000,
         use_hyde: bool = False,

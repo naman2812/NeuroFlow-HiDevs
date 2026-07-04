@@ -38,7 +38,7 @@ async def generate_synthetic_test_set(pool, client: NeuroFlowClient, num_samples
         
         try:
             result = await client.chat([ChatMessage(role="user", content=prompt)], criteria)
-            question = result.message.content.strip()
+            question = result.content.strip()
             
             test_set.append({
                 "query": question,

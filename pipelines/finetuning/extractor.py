@@ -98,7 +98,7 @@ class FineTuneExtractor:
 
         try:
             faithfulness = await evaluate_faithfulness(  # type: ignore
-                query=user_msg, generation=assistant_msg, context=context, client=self.client
+                query=user_msg, answer=assistant_msg, context=context, client=self.client
             )
         except Exception:
             return False

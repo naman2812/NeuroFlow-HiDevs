@@ -97,7 +97,7 @@ class Retriever:
                             )
                         )
 
-            unique_results = {}  # type: ignore
+            unique_results: dict[str, RetrievalResult] = {}
             for r in results_list:
                 if r.chunk_id not in unique_results or r.score > unique_results[r.chunk_id].score:
                     unique_results[r.chunk_id] = r
@@ -156,7 +156,7 @@ class Retriever:
                             )
                         )
 
-            unique_results = {}  # type: ignore
+            unique_results: dict[str, RetrievalResult] = {}
             for r in results_list:
                 if r.chunk_id not in unique_results or r.score > unique_results[r.chunk_id].score:
                     unique_results[r.chunk_id] = r

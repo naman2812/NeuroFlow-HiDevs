@@ -61,7 +61,7 @@ class CrossEncoderReranker:
         try:
             llm_result = await self.client.chat(messages, criteria)
             # Try to parse the number
-            content = llm_result.message.content.strip()  # type: ignore
+            content = llm_result.content.strip()
             # Clean up potential extra text around the number
             score_str = "".join(c for c in content if c.isdigit() or c == ".")
             score = float(score_str) if score_str else 0.0

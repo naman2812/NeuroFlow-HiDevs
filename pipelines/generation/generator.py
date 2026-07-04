@@ -32,7 +32,7 @@ class StreamingGenerator:
         query: str,
         query_type: str,
         assembled_context: dict[str, Any],
-        config: dict[str, Any] = None,  # type: ignore
+        config: dict[str, Any] | None = None,
     ) -> AsyncGenerator[tuple[str, list[dict[str, Any]]], None]:
 
         start_time = time.time()
@@ -183,7 +183,7 @@ class StreamingGenerator:
             # Enqueue evaluation job (Task 37) asynchronously
             from opentelemetry.propagate import inject
 
-            carrier = {}  # type: ignore
+            carrier: dict[str, str] = {}
             inject(carrier)
             payload = json.dumps(
                 {

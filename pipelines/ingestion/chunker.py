@@ -19,7 +19,7 @@ class Chunk:
 
 
 class Chunker:
-    def __init__(self, client: NeuroFlowClient = None) -> None:  # type: ignore
+    def __init__(self, client: NeuroFlowClient | None = None) -> None:  # type: ignore
         self.encoder = tiktoken.get_encoding("cl100k_base")
         self.client = client
 
@@ -80,7 +80,7 @@ class Chunker:
         full_text = "\n\n".join(p.content for p in pages)
         sentences = self._split_into_sentences(full_text, is_table)
 
-        current_chunk_sentences = []  # type: ignore
+        current_chunk_sentences: list[str] = []
         current_tokens = 0
 
         for sentence in sentences:
@@ -104,7 +104,7 @@ class Chunker:
                 chunk_idx += 1
 
                 # Keep overlap
-                overlap_sentences = []  # type: ignore
+                overlap_sentences: list[str] = []
                 overlap_count = 0
                 for s in reversed(current_chunk_sentences):
                     s_toks = len(self.encoder.encode(s))
