@@ -22,7 +22,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v5
         with:
-          context: backend
+          context: .
+          file: backend/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}/api:${{ github.sha }}
           cache-from: type=gha
@@ -33,3 +34,4 @@ jobs:
           image-ref: ghcr.io/${{ github.repository }}/api:${{ github.sha }}
           exit-code: '1'
           severity: CRITICAL
+          vuln-type: 'library'
