@@ -22,12 +22,23 @@ class Settings(BaseSettings):
     openai_api_key: str | None = Field(default=None, description="OpenAI API Key")
     anthropic_api_key: str | None = Field(default=None, description="Anthropic API Key")
 
+    env_prefix: str = Field(
+        default="", 
+        description="Prefix for Postgres schemas and Redis keys to isolate preview environments"
+    )
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
     def database_url(self) -> str:
         """Constructs the asyncpg database URL."""
         return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-
-
+    @property
+    def redis_url(self) -> str:
+        """Constructs the Redis URL with automatic logical DB isolation for preview environments."""
+        db_index = 0
+        if self.env_prefix:
+            import hashlib
+            db_index = int(hashlib.md5(self.env_prefix.encode()).hexdigest(), 16) % 15 + 1
+        return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{db_index}"
 settings = Settings()

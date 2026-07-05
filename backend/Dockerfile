@@ -28,6 +28,7 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 COPY backend/ /app/backend/
 COPY pipelines/ /app/pipelines/
 COPY evaluation/ /app/evaluation/
+COPY infra/ /app/infra/
 
 # Ensure uploads directory exists and is owned by neuroflow so volume mounts inherit permissions
 RUN mkdir -p /app/uploads && chown -R neuroflow:neuroflow /app

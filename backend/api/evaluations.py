@@ -24,7 +24,7 @@ async def stream_evaluations(request: Request) -> Any:  # noqa: ANN401
 
     async def event_generator() -> Any:  # noqa: ANN401
         r = aioredis.from_url(
-            f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+            settings.redis_url,
             decode_responses=True,
         )
         pubsub = r.pubsub()
@@ -107,7 +107,7 @@ async def simulate_eval(req: SimulateEval) -> Any:  # noqa: ANN401
         eval_overall.labels(pipeline_id=req.pipeline_name).set(overall_score)
 
         r = aioredis.from_url(
-            f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+            settings.redis_url,
             decode_responses=True,
         )
 
@@ -151,7 +151,7 @@ async def process_evaluation_queue() -> Any:  # noqa: ANN401
     import random
 
     r = aioredis.from_url(
-        f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+        settings.redis_url,
         decode_responses=True,
     )
 

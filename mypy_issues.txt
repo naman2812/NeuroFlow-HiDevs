@@ -1,0 +1,27 @@
+evaluation\run_calibration.py:10: error: Function is missing a return type annotation  [no-untyped-def]
+evaluation\run_calibration.py:14: error: Function is missing a return type annotation  [no-untyped-def]
+evaluation\run_calibration.py:14: note: Use "-> None" if function does not return a value
+evaluation\run_calibration.py:18: error: Argument 1 to "NeuroFlowClient" has incompatible type "MockRedis"; expected "Redis | None"  [arg-type]
+evaluation\run_calibration.py:69: error: Call to untyped function "main" in typed context  [no-untyped-call]
+evaluation\metrics\faithfulness.py:8: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+evaluation\metrics\faithfulness.py:10: error: Unused "type: ignore" comment  [unused-ignore]
+evaluation\metrics\context_recall.py:8: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+evaluation\metrics\context_recall.py:10: error: Unused "type: ignore" comment  [unused-ignore]
+evaluation\metrics\context_precision.py:6: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+evaluation\metrics\context_precision.py:8: error: Unused "type: ignore" comment  [unused-ignore]
+evaluation\metrics\answer_relevance.py:8: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+evaluation\metrics\answer_relevance.py:10: error: Unused "type: ignore" comment  [unused-ignore]
+evaluation\retrieval_eval.py:16: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+evaluation\retrieval_eval.py:47: error: "GenerationResult" has no attribute "message"  [attr-defined]
+evaluation\retrieval_eval.py:57: error: Function is missing a return type annotation  [no-untyped-def]
+evaluation\retrieval_eval.py:57: note: Use "-> None" if function does not return a value
+evaluation\retrieval_eval.py:125: error: Call to untyped function "run_evaluation" in typed context  [no-untyped-call]
+evaluation\judge.py:48: error: Function is missing a return type annotation  [no-untyped-def]
+evaluation\judge.py:49: error: Missing type arguments for generic type "list"  [type-arg]
+evaluation\judge.py:49: error: Incompatible default for parameter "temperature" (default has type "None", parameter has type "float")  [assignment]
+evaluation\judge.py:49: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+evaluation\judge.py:49: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+evaluation\judge.py:50: error: Unused "type: ignore" comment  [unused-ignore]
+evaluation\judge.py:106: error: Call to untyped function "compute_overall" in typed context  [no-untyped-call]
+evaluation\judge.py:109: error: Unused "type: ignore" comment  [unused-ignore]
+Found 22 errors in 7 files (checked 78 source files)

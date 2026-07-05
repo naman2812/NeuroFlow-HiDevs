@@ -23,7 +23,7 @@ class FineTuneRequest(BaseModel):
 
 async def get_redis() -> Any:  # noqa: ANN401
     client = aioredis.from_url(
-        f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+        settings.redis_url,
         decode_responses=True,
     )
     try:
