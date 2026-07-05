@@ -300,6 +300,8 @@ async def process_evaluation_queue() -> Any:  # noqa: ANN401
         except asyncio.CancelledError:
             break
         except Exception as e:
+            if "Timeout reading" in str(e) or "TimeoutError" in type(e).__name__:
+                continue
             print(f"Error processing evaluation queue: {e}")
             await asyncio.sleep(1)
 
