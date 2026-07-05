@@ -40,6 +40,24 @@ from backend.api.evaluations import process_evaluation_queue  # noqa: E402
 async def lifespan(app: FastAPI) -> Any:  # noqa: ANN401
     # Startup
     await create_pool()
+    
+    if settings.env_prefix:
+        from backend.db.pool import get_pool
+        import os
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(f"CREATE SCHEMA IF NOT EXISTS {settings.env_prefix}")
+            table_exists = await conn.fetchval(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = '{settings.env_prefix}' AND table_name = 'documents')")
+            if not table_exists:
+                schema_path = os.path.join(os.path.dirname(__file__), "../infra/init/001_schema.sql")
+                rls_path = os.path.join(os.path.dirname(__file__), "../infra/init/002_rls.sql")
+                if os.path.exists(schema_path):
+                    with open(schema_path, "r", encoding="utf-8") as f:
+                        await conn.execute(f.read())
+                if os.path.exists(rls_path):
+                    with open(rls_path, "r", encoding="utf-8") as f:
+                        await conn.execute(f.read())
+    
     await run_migrations()
 
     # Start background evaluation queue processor
@@ -89,7 +107,7 @@ async def health_check() -> Any:  # noqa: ANN401
         from backend.config import settings
 
         r = aioredis.from_url(
-            f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+            settings.redis_url,
             decode_responses=True,
         )
 

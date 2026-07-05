@@ -9,7 +9,15 @@ pool = None
 
 async def create_pool() -> Any:  # noqa: ANN401
     global pool
-    pool = await asyncpg.create_pool(dsn=settings.database_url)
+    
+    server_settings = {}
+    if settings.env_prefix:
+        server_settings["search_path"] = f"{settings.env_prefix}, public"
+        
+    pool = await asyncpg.create_pool(
+        dsn=settings.database_url,
+        server_settings=server_settings
+    )
 
 
 async def close_pool() -> Any:  # noqa: ANN401
