@@ -6,7 +6,11 @@ from backend.providers.router import RoutingCriteria
 
 
 async def evaluate_context_precision(
-    query: str, chunks: list[str], answer: str, client: NeuroFlowClient, **kwargs: Any  # noqa: ANN401
+    query: str,
+    chunks: list[str],
+    answer: str,
+    client: NeuroFlowClient,
+    **kwargs: Any,  # noqa: ANN401
 ) -> float:
     if not chunks:
         return 0.0

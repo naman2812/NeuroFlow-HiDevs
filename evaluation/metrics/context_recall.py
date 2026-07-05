@@ -7,7 +7,11 @@ from backend.providers.router import RoutingCriteria
 
 
 async def evaluate_context_recall(
-    query: str, chunks: list[str], answer: str, client: NeuroFlowClient, **kwargs: Any  # noqa: ANN401
+    query: str,
+    chunks: list[str],
+    answer: str,
+    client: NeuroFlowClient,
+    **kwargs: Any,  # noqa: ANN401
 ) -> float:
     if not answer or not answer.strip():
         return 0.0

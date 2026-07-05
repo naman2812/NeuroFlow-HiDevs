@@ -35,7 +35,9 @@ class Retriever:
     ) -> list[RetrievalResult]:
         # Run three strategies in parallel
         results = await asyncio.gather(
-            self._dense_retrieval(processed_query, dense_k or k, use_hyde, pipeline_id, run_id, use_cache),
+            self._dense_retrieval(
+                processed_query, dense_k or k, use_hyde, pipeline_id, run_id, use_cache
+            ),
             self._sparse_retrieval(processed_query, sparse_k or k, pipeline_id, run_id),
             self._metadata_retrieval(processed_query, k, pipeline_id, run_id, use_cache),
         )
@@ -196,7 +198,9 @@ class Retriever:
                 span.set_attribute("chunk_count", 0)
                 return []
 
-            embeddings = await self.client.embed([processed_query.original_query], use_cache=use_cache)
+            embeddings = await self.client.embed(
+                [processed_query.original_query], use_cache=use_cache
+            )
             emb = embeddings[0]
 
             async with self.db_pool.acquire() as conn:

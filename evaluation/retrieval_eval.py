@@ -3,6 +3,8 @@ import json
 import logging
 from typing import Any
 
+import asyncpg
+
 from backend.db.pool import close_pool, create_pool, get_pool
 from backend.providers.base import ChatMessage
 from backend.providers.client import NeuroFlowClient
@@ -14,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 async def generate_synthetic_test_set(
-    pool: Any, client: NeuroFlowClient, num_samples: int = 20  # noqa: ANN401
+    pool: asyncpg.Pool,
+    client: NeuroFlowClient,
+    num_samples: int = 20,  # noqa: ANN401
 ) -> list[dict[str, Any]]:
     test_set = []
 

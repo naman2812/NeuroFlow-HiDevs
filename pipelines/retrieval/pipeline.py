@@ -25,7 +25,12 @@ class RetrievalPipeline:
         self.redis = client.redis
 
     async def retrieve(
-        self, query: str, k: int = 10, token_budget: int = 4000, use_hyde: bool = False, config: dict[str, Any] | None = None
+        self,
+        query: str,
+        k: int = 10,
+        token_budget: int = 4000,
+        use_hyde: bool = False,
+        config: dict[str, Any] | None = None,
     ) -> list[RetrievalResult]:
         """
         Mainly for evaluation script which expects a list of results.
@@ -49,8 +54,8 @@ class RetrievalPipeline:
         # Pass max(dense_k/sparse_k/k, 60) to ensure enough candidates if not explicitly overridden
         retrieval_k = max(top_k_after_rerank, 60)
         retrieved_results = await self.retriever.retrieve(
-            processed_query, 
-            k=retrieval_k, 
+            processed_query,
+            k=retrieval_k,
             use_hyde=use_hyde,
             dense_k=dense_k,
             sparse_k=sparse_k,
@@ -78,6 +83,7 @@ class RetrievalPipeline:
         """
         import hashlib
         import json
+
         from .models import RetrievalResult
 
         dense_k = None
@@ -103,16 +109,16 @@ class RetrievalPipeline:
             prompt_variant = config["generation"].get("prompt_variant", "B")
 
         # Create cache key incorporating all configuration parameters
-        config_hash = f"{k}_{token_budget}_{use_hyde}_{pipeline_id}_{prompt_variant}_{rrf_weights}_{use_cache}_{dense_k}_{sparse_k}_{rrf_k}"
+        config_hash = f"{k}_{token_budget}_{use_hyde}_{pipeline_id}_{prompt_variant}_{rrf_weights}_{use_cache}_{dense_k}_{sparse_k}_{rrf_k}"  # noqa: E501
         cache_str = f"{query}_{config_hash}"
-        key_hash = hashlib.sha256(cache_str.encode('utf-8')).hexdigest()
+        key_hash = hashlib.sha256(cache_str.encode("utf-8")).hexdigest()
         cache_key = f"cache:query:{key_hash}"
 
         cached = await self.redis.get(cache_key)
         if cached:
             data = json.loads(cached)
             data["raw_results"] = [RetrievalResult(**r) for r in data["raw_results"]]
-            return data
+            return data  # type: ignore
 
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.pipeline") as span:
@@ -121,7 +127,9 @@ class RetrievalPipeline:
             if run_id:
                 span.set_attribute("run_id", run_id)
 
-            processed_query = await self.query_processor.process_query(query, prompt_variant=prompt_variant)
+            processed_query = await self.query_processor.process_query(
+                query, prompt_variant=prompt_variant
+            )
             retrieval_k = max(k, 60)
             retrieved_results = await self.retriever.retrieve(
                 processed_query,

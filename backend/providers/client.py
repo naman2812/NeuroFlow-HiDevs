@@ -172,7 +172,7 @@ class NeuroFlowClient:
 
         # 1. Check Redis cache for each text
         for i, text in enumerate(texts):
-            key_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+            key_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
             cache_key = f"cache:embed:{key_hash}"
             cached = await self.redis.get(cache_key)
             if cached:
@@ -198,7 +198,9 @@ class NeuroFlowClient:
             await consume_llm_token("openai")
 
             async with CircuitBreaker("openai"):
-                new_embeddings = await TimeoutManager.run("embedding", provider.embed(texts_to_embed))
+                new_embeddings = await TimeoutManager.run(
+                    "embedding", provider.embed(texts_to_embed)
+                )
 
             # 3. Store new embeddings in cache
             for i, text in enumerate(texts_to_embed):
@@ -206,7 +208,7 @@ class NeuroFlowClient:
                 original_index = indices_to_embed[i]
                 final_embeddings[original_index] = emb
 
-                key_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+                key_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
                 cache_key = f"cache:embed:{key_hash}"
                 await self.redis.setex(cache_key, 86400 * 7, json.dumps(emb))  # Cache for 7 days
 
