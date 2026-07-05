@@ -42,20 +42,21 @@ async def lifespan(app: FastAPI) -> Any:  # noqa: ANN401
     await create_pool()
     
     if settings.env_prefix:
-        from backend.db.pool import get_pool
-        import os
+        from backend.db.pool import get_pool  # noqa: I001, PLC0415
+        import os  # noqa: I001, PLC0415
         pool = get_pool()
         async with pool.acquire() as conn:
             await conn.execute(f"CREATE SCHEMA IF NOT EXISTS {settings.env_prefix}")
-            table_exists = await conn.fetchval(f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = '{settings.env_prefix}' AND table_name = 'documents')")
+            q = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = '{settings.env_prefix}' AND table_name = 'documents')"  # noqa: E501
+            table_exists = await conn.fetchval(q)
             if not table_exists:
-                schema_path = os.path.join(os.path.dirname(__file__), "../infra/init/001_schema.sql")
-                rls_path = os.path.join(os.path.dirname(__file__), "../infra/init/002_rls.sql")
-                if os.path.exists(schema_path):
-                    with open(schema_path, "r", encoding="utf-8") as f:
+                schema_path = os.path.join(os.path.dirname(__file__), "../infra/init/001_schema.sql")  # noqa: ASYNC240, E501
+                rls_path = os.path.join(os.path.dirname(__file__), "../infra/init/002_rls.sql")  # noqa: ASYNC240, E501
+                if os.path.exists(schema_path):  # noqa: ASYNC240
+                    with open(schema_path, encoding="utf-8") as f:  # noqa: ASYNC230
                         await conn.execute(f.read())
-                if os.path.exists(rls_path):
-                    with open(rls_path, "r", encoding="utf-8") as f:
+                if os.path.exists(rls_path):  # noqa: ASYNC240
+                    with open(rls_path, encoding="utf-8") as f:  # noqa: ASYNC230
                         await conn.execute(f.read())
     
     await run_migrations()
