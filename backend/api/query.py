@@ -105,7 +105,7 @@ async def submit_query(
     # Retrieval
     context_data = await retrieval_pipeline.get_context(
         req.query,
-        config=pipeline_config,  # type: ignore
+        config=pipeline_config,
         pipeline_id=str(req.pipeline_id),
         run_id=str(run_id),
     )
@@ -121,7 +121,7 @@ async def submit_query(
         req.query,
         context_data.get("query_type", "factual"),
         context_data,
-        config=pipeline_config,  # type: ignore
+        config=pipeline_config,
     )
 
     async for chunk, batch_citations in stream_gen:
@@ -212,7 +212,7 @@ async def stream_query(
 
                     context_data = await retrieval_pipeline.get_context(
                         query,
-                        config=pipeline_config,  # type: ignore
+                        config=pipeline_config,
                         pipeline_id=str(pipeline_id),
                         run_id=str(run_id),
                     )
@@ -235,7 +235,7 @@ async def stream_query(
                         query,
                         context_data.get("query_type", "factual"),
                         context_data,
-                        config=pipeline_config,  # type: ignore
+                        config=pipeline_config,
                     )
                     async for chunk, batch_citations in stream_gen:
                         if chunk:

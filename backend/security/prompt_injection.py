@@ -28,13 +28,13 @@ def sanitize_text(text: str) -> str:
 def scan_for_prompt_injection(text: str) -> dict | None:  # type: ignore
     """Layer 1: Pattern matching."""
     if not text:
-        return None  # type: ignore
+        return None
 
     for pattern in COMPILED_PATTERNS:
         match = pattern.search(text)
         if match:
             return {"prompt_injection_detected": True, "pattern": pattern.pattern}
-    return None  # type: ignore
+    return None
 
 
 async def classify_prompt_injection(query: str, client: Any) -> bool:  # noqa: ANN401
