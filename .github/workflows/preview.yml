@@ -24,6 +24,7 @@ jobs:
           railway environment create $ENV_NAME || true
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: Deploy Backend
         run: |
@@ -32,6 +33,7 @@ jobs:
           railway up --service grateful-trust --environment $ENV_NAME --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: Inject Environment Prefix Variable
         run: |
@@ -39,6 +41,7 @@ jobs:
           railway variables set ENV_PREFIX=$ENV_NAME --environment $ENV_NAME --service grateful-trust
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
       - name: Comment PR with Deployment URL
         uses: mshick/add-pr-comment@v2
@@ -68,6 +71,7 @@ jobs:
           railway environment delete $ENV_NAME --confirm
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           
       - name: Drop Isolated Postgres Schema
         run: |
