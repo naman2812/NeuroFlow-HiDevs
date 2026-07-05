@@ -29,14 +29,14 @@ jobs:
         run: |
           ENV_NAME="pr-${{ github.event.pull_request.number }}"
           # Deploy code as a detached service directly to the PR environment
-          railway up --service backend --environment $ENV_NAME --detach
+          railway up --service api --environment $ENV_NAME --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Inject Environment Prefix Variable
         run: |
           ENV_NAME="pr-${{ github.event.pull_request.number }}"
-          railway variables set ENV_PREFIX=$ENV_NAME --environment $ENV_NAME --service backend
+          railway variables set ENV_PREFIX=$ENV_NAME --environment $ENV_NAME --service api
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
