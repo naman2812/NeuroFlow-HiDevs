@@ -65,7 +65,7 @@ jobs:
       - name: Delete Railway Environment
         run: |
           ENV_NAME="pr-${{ github.event.pull_request.number }}"
-          railway environment delete $ENV_NAME --confirm
+          railway environment delete $ENV_NAME
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           
