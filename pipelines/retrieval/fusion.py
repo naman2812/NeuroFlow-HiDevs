@@ -2,16 +2,17 @@ from .models import RetrievalResult
 
 
 def reciprocal_rank_fusion(
-    result_lists: list[list[RetrievalResult]], k: int = 60
+    result_lists: list[list[RetrievalResult]], k: int = 60, weights: list[float] | None = None
 ) -> list[RetrievalResult]:
     """
     Combines multiple retrieval lists using Reciprocal Rank Fusion.
-    For each chunk, score = sum(1 / (k + rank)) across all lists.
+    For each chunk, score = sum(weight * 1 / (k + rank)) across all lists.
     """
     chunk_scores: dict[str, float] = {}
     chunk_map: dict[str, RetrievalResult] = {}
 
-    for result_list in result_lists:
+    for i, result_list in enumerate(result_lists):
+        weight = weights[i] if weights and i < len(weights) else 1.0
         for rank, result in enumerate(result_list):
             chunk_id = result.chunk_id
 
@@ -21,8 +22,7 @@ def reciprocal_rank_fusion(
                 chunk_scores[chunk_id] = 0.0
 
             # Compute RRF score contribution
-            # rank is 0-indexed, but the formula usually implies 1-indexed rank
-            score_contribution = 1.0 / (k + (rank + 1))
+            score_contribution = (1.0 / (k + (rank + 1))) * weight
             chunk_scores[chunk_id] += score_contribution
 
     # Create new results with fused scores

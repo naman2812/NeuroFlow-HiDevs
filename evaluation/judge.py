@@ -21,7 +21,12 @@ class EvaluationJudge:
         self.client = NeuroFlowClient(redis_client)
 
     async def _run_metrics(
-        self, query: str, generation: str, context: str, chunks: list[str], temperature: float | None = None  # noqa: E501
+        self,
+        query: str,
+        generation: str,
+        context: str,
+        chunks: list[str],
+        temperature: float | None = None,  # noqa: E501
     ) -> tuple[float, float, float, float]:
         kwargs: dict[str, Any] = {"temperature": temperature} if temperature is not None else {}
 

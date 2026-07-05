@@ -27,12 +27,19 @@ class Retriever:
         use_hyde: bool = False,
         pipeline_id: str | None = None,
         run_id: str | None = None,
+        rrf_weights: list[float] | None = None,
+        use_cache: bool = True,
+        dense_k: int | None = None,
+        sparse_k: int | None = None,
+        rrf_k: int = 60,
     ) -> list[RetrievalResult]:
         # Run three strategies in parallel
         results = await asyncio.gather(
-            self._dense_retrieval(processed_query, k, use_hyde, pipeline_id, run_id),
-            self._sparse_retrieval(processed_query, k, pipeline_id, run_id),
-            self._metadata_retrieval(processed_query, k, pipeline_id, run_id),
+            self._dense_retrieval(
+                processed_query, dense_k or k, use_hyde, pipeline_id, run_id, use_cache
+            ),
+            self._sparse_retrieval(processed_query, sparse_k or k, pipeline_id, run_id),
+            self._metadata_retrieval(processed_query, k, pipeline_id, run_id, use_cache),
         )
 
         # Fuse results
@@ -42,7 +49,8 @@ class Retriever:
             if run_id:
                 span.set_attribute("run_id", run_id)
 
-            fused = reciprocal_rank_fusion(list(results))
+            weights = rrf_weights if rrf_weights else [0.6, 0.4, 1.0]
+            fused = reciprocal_rank_fusion(list(results), k=rrf_k, weights=weights)
             span.set_attribute("chunk_count", len(fused))
             return fused
 
@@ -53,6 +61,7 @@ class Retriever:
         use_hyde: bool,
         pipeline_id: str | None = None,
         run_id: str | None = None,
+        use_cache: bool = True,
     ) -> list[RetrievalResult]:
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.dense") as span:
@@ -66,7 +75,7 @@ class Retriever:
                 queries = [processed_query.original_query] + processed_query.expanded_queries
 
             # Embed all queries (original + expanded) in one shot
-            embeddings = await self.client.embed(queries)
+            embeddings = await self.client.embed(queries, use_cache=use_cache)
 
             results_list = []
 
@@ -177,6 +186,7 @@ class Retriever:
         k: int,
         pipeline_id: str | None = None,
         run_id: str | None = None,
+        use_cache: bool = True,
     ) -> list[RetrievalResult]:
         start_time = time.time()
         with tracer.start_as_current_span("retrieval.metadata") as span:
@@ -188,7 +198,9 @@ class Retriever:
                 span.set_attribute("chunk_count", 0)
                 return []
 
-            embeddings = await self.client.embed([processed_query.original_query])
+            embeddings = await self.client.embed(
+                [processed_query.original_query], use_cache=use_cache
+            )
             emb = embeddings[0]
 
             async with self.db_pool.acquire() as conn:

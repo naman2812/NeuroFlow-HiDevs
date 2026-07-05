@@ -8,7 +8,10 @@ from backend.providers.router import RoutingCriteria
 
 
 async def evaluate_answer_relevance(
-    query: str, answer: str, client: NeuroFlowClient, **kwargs: Any  # noqa: ANN401
+    query: str,
+    answer: str,
+    client: NeuroFlowClient,
+    **kwargs: Any,  # noqa: ANN401
 ) -> float:
     if not answer or not answer.strip():
         return 0.0
