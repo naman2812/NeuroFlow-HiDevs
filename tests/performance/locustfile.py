@@ -1,7 +1,5 @@
 import random
 from locust import HttpUser, task, between
-from backend.config import settings
-
 SAMPLE_QUERIES = [
     "What is the main topic of the document?",
     "Explain the architecture.",

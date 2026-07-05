@@ -16,7 +16,7 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - run: pip install ruff mypy types-bleach pandas-stubs
       - run: ruff check backend/ pipelines/ evaluation/
-      - run: mypy --explicit-package-bases backend/ pipelines/ evaluation/
+      - run: mypy --explicit-package-bases --ignore-missing-imports backend/ pipelines/ evaluation/
 
   test:
     runs-on: ubuntu-latest

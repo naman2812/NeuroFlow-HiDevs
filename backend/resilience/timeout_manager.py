@@ -17,7 +17,7 @@ def get_redis_client() -> Any:  # noqa: ANN401
     global _redis_client
     if _redis_client is None:
         _redis_client = aioredis.from_url(
-            f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+            settings.redis_url,
             decode_responses=True,
         )
     return _redis_client

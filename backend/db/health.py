@@ -39,7 +39,7 @@ async def check_mlflow() -> dict:  # type: ignore
     start = time.perf_counter()
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{settings.mlflow_uri}/health", timeout=2.0)
+            response = await client.get(f"{settings.mlflow_uri}/ping", timeout=2.0)
             latency = int((time.perf_counter() - start) * 1000)
             if response.status_code == 200:
                 return {"status": "ok", "latency_ms": latency}
