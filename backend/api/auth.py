@@ -5,15 +5,22 @@ from pydantic import BaseModel
 
 from backend.security.auth import create_access_token
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Admin"])
 
+
+from pydantic import BaseModel, Field
 
 class TokenRequest(BaseModel):
-    client_id: str
-    client_secret: str
+    client_id: str = Field(..., description="The client ID for authentication.", example="client_123")
+    client_secret: str = Field(..., description="The client secret for authentication.", example="supersecret")
 
 
-@router.post("/token")
+@router.post(
+    "/token",
+    summary="Generate API Access Token",
+    description="Generates a short-lived JWT Bearer token using client credentials. This token is required in the `Authorization: Bearer <token>` header for all other endpoints. **Errors**: Returns 401 for invalid credentials.",
+    response_description="A JSON object containing the JWT access token and expiration."
+)
 async def generate_token(req: TokenRequest) -> Any:  # noqa: ANN401
     # Dummy verification - in real world check DB
     if not req.client_id or not req.client_secret:
