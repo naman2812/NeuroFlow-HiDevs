@@ -1,5 +1,6 @@
 import asyncio
 import json
+from typing import Any, cast
 
 import numpy as np
 
@@ -15,7 +16,7 @@ async def main() -> None:
     with open("evaluation/calibration/annotated_set.json") as f:  # noqa: ASYNC230
         dataset = json.load(f)
 
-    NeuroFlowClient(MockRedis())  # type: ignore
+    NeuroFlowClient(cast(Any, MockRedis()))
 
     # Since we might not have a real API key, we will mock the evaluate_faithfulness by hooking into chat  # noqa: E501
     # Or we can just compute mock automated scores that correlate with human scores
