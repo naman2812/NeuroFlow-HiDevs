@@ -17,6 +17,7 @@ from backend.config import settings
 from backend.db.health import check_mlflow, check_postgres, check_redis
 from backend.db.migrations import run_migrations
 from backend.db.pool import close_pool, create_pool
+from backend.db.retention import start_retention_scheduler, stop_retention_scheduler
 
 # Setup tracing
 resource = Resource.create({"service.name": "neuroflow-api"})
@@ -40,13 +41,36 @@ from backend.api.evaluations import process_evaluation_queue  # noqa: E402
 async def lifespan(app: FastAPI) -> Any:  # noqa: ANN401
     # Startup
     await create_pool()
+    
+    if settings.env_prefix:
+        from backend.db.pool import get_pool  # noqa: I001, PLC0415
+        import os  # noqa: I001, PLC0415
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(f"CREATE SCHEMA IF NOT EXISTS {settings.env_prefix}")
+            q = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = '{settings.env_prefix}' AND table_name = 'documents')"  # noqa: E501
+            table_exists = await conn.fetchval(q)
+            if not table_exists:
+                schema_path = os.path.join(os.path.dirname(__file__), "../infra/init/001_schema.sql")  # noqa: ASYNC240, E501
+                rls_path = os.path.join(os.path.dirname(__file__), "../infra/init/002_rls.sql")  # noqa: ASYNC240, E501
+                if os.path.exists(schema_path):  # noqa: ASYNC240
+                    with open(schema_path, encoding="utf-8") as f:  # noqa: ASYNC230
+                        await conn.execute(f.read())
+                if os.path.exists(rls_path):  # noqa: ASYNC240
+                    with open(rls_path, encoding="utf-8") as f:  # noqa: ASYNC230
+                        await conn.execute(f.read())
+    
     await run_migrations()
 
     # Start background evaluation queue processor
     task = asyncio.create_task(process_evaluation_queue())
+    
+    # Start data retention scheduled jobs
+    start_retention_scheduler()
 
     yield
     # Shutdown
+    stop_retention_scheduler()
     task.cancel()
     await close_pool()
 
@@ -77,7 +101,16 @@ app.include_router(evaluations.router, dependencies=[Depends(get_current_user)])
 FastAPIInstrumentor.instrument_app(app)
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    summary="System Health Check",
+    description=(
+        "Returns the current operational status of the API, PostgreSQL database, and Redis cache. "
+        "Useful for Kubernetes liveness/readiness probes."
+    ),
+    response_description="A JSON object detailing the health status of all subsystems.",
+    tags=["Admin"]
+)
 async def health_check() -> Any:  # noqa: ANN401
     pg_res = await check_postgres()
     redis_res = await check_redis()
@@ -89,7 +122,7 @@ async def health_check() -> Any:  # noqa: ANN401
         from backend.config import settings
 
         r = aioredis.from_url(
-            f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",
+            settings.redis_url,
             decode_responses=True,
         )
 
@@ -143,7 +176,16 @@ async def health_check() -> Any:  # noqa: ANN401
     }
 
 
-@app.get("/metrics")
+@app.get(
+    "/metrics",
+    summary="Prometheus Metrics",
+    description=(
+        "Exposes internal Prometheus metrics including request counts, error rates, "
+        "and API latencies. Intended to be scraped by a Prometheus server."
+    ),
+    response_description="Plain text Prometheus metrics exposition format.",
+    tags=["Admin"]
+)
 async def metrics() -> Any:  # noqa: ANN401
     # Prometheus text format
     data = generate_latest()

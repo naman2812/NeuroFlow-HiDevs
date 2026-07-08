@@ -153,8 +153,42 @@ class NeuroFlowClient:
             f"All fallback stream models failed for criteria {criteria}. Last error: {last_exception}"  # noqa: E501
         ) from last_exception
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Hardcode default to OpenAI text-embedding-3-small as requested in provider constraints
+    async def embed(self, texts: list[str], use_cache: bool = True) -> list[list[float]]:
+        import hashlib
+        import json
+
+        if not use_cache:
+            provider = self._get_provider("openai", "text-embedding-3-small")
+            with tracer.start_as_current_span("neuroflow.llm.embed") as span:
+                span.set_attribute("provider", "openai")
+                span.set_attribute("model", "text-embedding-3-small")
+                await consume_llm_token("openai")
+                async with CircuitBreaker("openai"):
+                    return await TimeoutManager.run("embedding", provider.embed(texts))  # type: ignore
+
+        cached_embeddings = []
+        texts_to_embed = []
+        indices_to_embed = []
+
+        # 1. Check Redis cache for each text
+        for i, text in enumerate(texts):
+            key_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            cache_key = f"cache:embed:{key_hash}"
+            cached = await self.redis.get(cache_key)
+            if cached:
+                cached_embeddings.append((i, json.loads(cached)))
+            else:
+                texts_to_embed.append(text)
+                indices_to_embed.append(i)
+
+        final_embeddings: list[list[float] | None] = [None] * len(texts)
+        for i, emb in cached_embeddings:
+            final_embeddings[i] = emb
+
+        if not texts_to_embed:
+            return final_embeddings  # type: ignore
+
+        # 2. Fetch missing embeddings
         provider = self._get_provider("openai", "text-embedding-3-small")
 
         with tracer.start_as_current_span("neuroflow.llm.embed") as span:
@@ -164,5 +198,18 @@ class NeuroFlowClient:
             await consume_llm_token("openai")
 
             async with CircuitBreaker("openai"):
-                embeddings = await TimeoutManager.run("embedding", provider.embed(texts))
-            return embeddings  # type: ignore
+                new_embeddings = await TimeoutManager.run(
+                    "embedding", provider.embed(texts_to_embed)
+                )
+
+            # 3. Store new embeddings in cache
+            for i, text in enumerate(texts_to_embed):
+                emb = new_embeddings[i]
+                original_index = indices_to_embed[i]
+                final_embeddings[original_index] = emb
+
+                key_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+                cache_key = f"cache:embed:{key_hash}"
+                await self.redis.setex(cache_key, 86400 * 7, json.dumps(emb))  # Cache for 7 days
+
+            return final_embeddings  # type: ignore

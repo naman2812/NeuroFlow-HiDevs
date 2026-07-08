@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 
@@ -5,9 +6,17 @@ from backend.providers.base import ChatMessage
 from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
 
+logger = logging.getLogger(__name__)
+
+
+
 
 async def evaluate_context_recall(
-    query: str, chunks: list[str], answer: str, client: NeuroFlowClient, **kwargs: Any  # noqa: ANN401
+    query: str,
+    chunks: list[str],
+    answer: str,
+    client: NeuroFlowClient,
+    **kwargs: Any,  # noqa: ANN401
 ) -> float:
     if not answer or not answer.strip():
         return 0.0
@@ -45,6 +54,6 @@ async def evaluate_context_recall(
             if "yes" in verdict:
                 attributable_sentences += 1.0
         except Exception as e:
-            print(f"Error checking sentence attribution: {e}")
+            logger.info(f"Error checking sentence attribution: {e}")
 
     return attributable_sentences / len(sentences)

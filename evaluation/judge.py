@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -11,6 +12,10 @@ from evaluation.metrics.context_precision import evaluate_context_precision
 from evaluation.metrics.context_recall import evaluate_context_recall
 from evaluation.metrics.faithfulness import evaluate_faithfulness
 
+logger = logging.getLogger(__name__)
+
+
+
 tracer = trace.get_tracer(__name__)
 
 
@@ -21,7 +26,12 @@ class EvaluationJudge:
         self.client = NeuroFlowClient(redis_client)
 
     async def _run_metrics(
-        self, query: str, generation: str, context: str, chunks: list[str], temperature: float | None = None  # noqa: E501
+        self,
+        query: str,
+        generation: str,
+        context: str,
+        chunks: list[str],
+        temperature: float | None = None,  # noqa: E501
     ) -> tuple[float, float, float, float]:
         kwargs: dict[str, Any] = {"temperature": temperature} if temperature is not None else {}
 
@@ -42,7 +52,7 @@ class EvaluationJudge:
                 UUID(run_id),
             )
             if not row:
-                print(f"Run {run_id} not found for evaluation.")
+                logger.info(f"Run {run_id} not found for evaluation.")
                 return None
 
             query = row["query"]

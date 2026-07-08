@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: neuroflow-sdk
+Version: 0.1.0
+Summary: Python SDK for NeuroFlow API
+Author: NeuroFlow Team
+Requires-Python: >=3.9
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: httpx-sse>=0.3.1

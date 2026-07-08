@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import numpy as np
@@ -6,9 +7,16 @@ from backend.providers.base import ChatMessage
 from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
 
+logger = logging.getLogger(__name__)
+
+
+
 
 async def evaluate_answer_relevance(
-    query: str, answer: str, client: NeuroFlowClient, **kwargs: Any  # noqa: ANN401
+    query: str,
+    answer: str,
+    client: NeuroFlowClient,
+    **kwargs: Any,  # noqa: ANN401
 ) -> float:
     if not answer or not answer.strip():
         return 0.0
@@ -36,7 +44,7 @@ async def evaluate_answer_relevance(
         # Limit to 5 just in case
         generated_questions = generated_questions[:5]
     except Exception as e:
-        print(f"Error generating questions: {e}")
+        logger.info(f"Error generating questions: {e}")
         return 0.0
 
     # Step 2: Embed queries
@@ -44,7 +52,7 @@ async def evaluate_answer_relevance(
     try:
         embeddings = await client.embed(texts_to_embed)
     except Exception as e:
-        print(f"Error embedding questions: {e}")
+        logger.info(f"Error embedding questions: {e}")
         return 0.0
 
     query_emb = np.array(embeddings[0])

@@ -1,13 +1,22 @@
 import json
+import logging
 from typing import Any
 
 from backend.providers.base import ChatMessage
 from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
 
+logger = logging.getLogger(__name__)
+
+
+
 
 async def evaluate_faithfulness(
-    query: str, answer: str, context: str, client: NeuroFlowClient, **kwargs: Any  # noqa: ANN401
+    query: str,
+    answer: str,
+    context: str,
+    client: NeuroFlowClient,
+    **kwargs: Any,  # noqa: ANN401
 ) -> float:
     if not answer or not answer.strip():
         return 0.0
@@ -36,7 +45,7 @@ async def evaluate_faithfulness(
         if not isinstance(claims, list):
             claims = []
     except Exception as e:
-        print(f"Error extracting claims: {e}")
+        logger.info(f"Error extracting claims: {e}")
         return 0.0
 
     if not claims:

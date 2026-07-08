@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 
 from PIL import Image
 from pptx import Presentation
@@ -10,6 +11,10 @@ from backend.providers.client import NeuroFlowClient
 from backend.providers.router import RoutingCriteria
 
 from .base import ExtractedPage
+
+logger = logging.getLogger(__name__)
+
+
 
 
 async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[ExtractedPage]:
@@ -32,7 +37,7 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[Extracte
                 try:
                     images.append(shape.image.blob)
                 except Exception as e:
-                    print(f"Failed to extract image from shape: {e}")
+                    logger.info(f"Failed to extract image from shape: {e}")
 
         # Extract speaker notes
         if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
@@ -47,7 +52,10 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[Extracte
                     max_size = 1024
                     if max(processed_img.size) > max_size:
                         ratio = max_size / max(processed_img.size)
-                        new_size = (int(processed_img.width * ratio), int(processed_img.height * ratio))  # noqa: E501
+                        new_size = (
+                            int(processed_img.width * ratio),
+                            int(processed_img.height * ratio),
+                        )  # noqa: E501
                         processed_img = processed_img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
 
                     buffered = io.BytesIO()
@@ -79,7 +87,7 @@ async def extract_pptx(file_path: str, client: NeuroFlowClient) -> list[Extracte
                     generation = await client.chat(messages, criteria)
                     descriptions.append(generation.content.strip())
             except Exception as e:
-                print(f"Vision LLM failed for slide {i + 1}: {e}")
+                logger.info(f"Vision LLM failed for slide {i + 1}: {e}")
                 descriptions.append(f"[Image description failed: {e}]")
 
         # Combine everything
