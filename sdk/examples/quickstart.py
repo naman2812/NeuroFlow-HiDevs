@@ -1,6 +1,10 @@
 import asyncio
 import os
 from neuroflow import NeuroFlowClient
+import logging
+logger = logging.getLogger(__name__)
+
+
 
 async def main():
     # Replace with your actual live deployment URL and API Key
@@ -11,23 +15,23 @@ async def main():
     
     pipeline_id = "123e4567-e89b-12d3-a456-426614174000"
 
-    print("1. Ingesting Wikipedia page via URL...")
+    logger.info("1. Ingesting Wikipedia page via URL...")
     doc = await client.ingest_url(
         url="https://en.wikipedia.org/wiki/Artificial_intelligence", 
         pipeline_id=pipeline_id
     )
-    print(f"Document Ingested! ID: {doc.document_id} | Status: {doc.status}")
+    logger.info(f"Document Ingested! ID: {doc.document_id} | Status: {doc.status}")
 
-    print("\n2. Running streaming query...")
-    print("Response: ", end="")
+    logger.info("\n2. Running streaming query...")
+    logger.info("Response: ", end="")
     async for token in client.query(
         query="What is artificial intelligence?", 
         pipeline_id=pipeline_id, 
         stream=True
     ):
-        print(token, end="", flush=True)
+        logger.info(token, end="", flush=True)
     
-    print("\n\nDone!")
+    logger.info("\n\nDone!")
     await client.close()
 
 if __name__ == "__main__":

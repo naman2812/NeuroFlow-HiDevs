@@ -1,5 +1,9 @@
 import os
 import re
+import logging
+logger = logging.getLogger(__name__)
+
+
 
 def fix_examples_in_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -20,7 +24,7 @@ def fix_examples_in_file(filepath):
     if count > 0:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(new_content)
-        print(f"Fixed {count} instances in {filepath}")
+        logger.info(f"Fixed {count} instances in {filepath}")
 
 for root, _, files in os.walk('backend'):
     for file in files:

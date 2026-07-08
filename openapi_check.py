@@ -1,5 +1,9 @@
 import json
 from backend.main import app
+import logging
+logger = logging.getLogger(__name__)
+
+
 
 schema = app.openapi()
 missing_descriptions = []
@@ -12,8 +16,8 @@ for path, methods in schema["paths"].items():
             missing_descriptions.append(f"{method.upper()} {path} missing summary")
 
 if not missing_descriptions:
-    print("SUCCESS: All endpoints have descriptions and summaries.")
+    logger.info("SUCCESS: All endpoints have descriptions and summaries.")
 else:
-    print("MISSING DESCRIPTIONS:")
+    logger.info("MISSING DESCRIPTIONS:")
     for m in missing_descriptions:
-        print(m)
+        logger.info(m)

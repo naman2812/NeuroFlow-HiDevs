@@ -1,6 +1,10 @@
 import asyncio
 import httpx
 import json
+import logging
+logger = logging.getLogger(__name__)
+
+
 
 API_URL = "http://localhost:8000"
 
@@ -34,8 +38,8 @@ async def main():
         res_b = await client.post(f"{API_URL}/pipelines", json=pipe_b_data)
         pipe_b_id = res_b.json()["id"]
         
-        print(f"Created Pipeline A: {pipe_a_id}")
-        print(f"Created Pipeline B: {pipe_b_id}")
+        logger.info(f"Created Pipeline A: {pipe_a_id}")
+        logger.info(f"Created Pipeline B: {pipe_b_id}")
         
         queries = [
             "What is the capital of France?",
@@ -46,7 +50,7 @@ async def main():
         ]
         
         for i, query in enumerate(queries):
-            print(f"\\n--- Query {i+1}: {query} ---")
+            logger.info(f"\\n--- Query {i+1}: {query} ---")
             req = {
                 "query": query,
                 "pipeline_a_id": pipe_a_id,
@@ -59,14 +63,14 @@ async def main():
             score_a = data.get("pipeline_a", {}).get("eval_score")
             score_b = data.get("pipeline_b", {}).get("eval_score")
             
-            print(f"Pipeline A eval_score: {score_a}")
-            print(f"Pipeline B eval_score: {score_b}")
+            logger.info(f"Pipeline A eval_score: {score_a}")
+            logger.info(f"Pipeline B eval_score: {score_b}")
             
             if score_a is not None and score_b is not None:
-                print("[SUCCESS] Both pipelines returned evaluation scores!")
+                logger.info("[SUCCESS] Both pipelines returned evaluation scores!")
             else:
-                print("[FAILED] Missing evaluation score(s).")
-                print("Response:", json.dumps(data, indent=2))
+                logger.info("[FAILED] Missing evaluation score(s).")
+                logger.info("Response:", json.dumps(data, indent=2))
 
 if __name__ == "__main__":
     asyncio.run(main())
