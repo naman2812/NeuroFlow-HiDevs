@@ -10,10 +10,10 @@ router = APIRouter(prefix="/auth", tags=["Admin"])
 
 class TokenRequest(BaseModel):
     client_id: str = Field(
-        ..., description="The client ID for authentication.", example="client_123"
+        ..., description="The client ID for authentication.", examples=["client_123"]
     )
     client_secret: str = Field(
-        ..., description="The client secret for authentication.", example="supersecret"
+        ..., description="The client secret for authentication.", examples=["supersecret"]
     )
 
 

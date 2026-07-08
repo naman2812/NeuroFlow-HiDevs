@@ -32,13 +32,13 @@ class QueryRequest(BaseModel):
         ..., 
         max_length=5000,
         description="The natural language question or query to run against the knowledge base.",
-        example="What is NeuroFlow?",
+        examples=["What is NeuroFlow?"],
         json_schema_extra={"example": "What are the key benefits of RAG?"}
     )
     pipeline_id: UUID = Field(
         ...,
         description="The unique identifier of the RAG pipeline to use for this query.",
-        example="123e4567-e89b-12d3-a456-426614174000"
+        examples=["123e4567-e89b-12d3-a456-426614174000"]
     )
     stream: bool = Field(
         False,

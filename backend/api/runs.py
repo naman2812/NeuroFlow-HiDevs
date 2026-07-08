@@ -16,7 +16,7 @@ class RatingRequest(BaseModel):
         ge=1, 
         le=5, 
         description="The user's explicit rating for the generated answer, from 1 to 5.", 
-        example=5
+        examples=[5]
     )
 
 

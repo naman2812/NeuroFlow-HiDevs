@@ -50,7 +50,7 @@ class URLIngestRequest(BaseModel):
         description=(
             "The fully qualified HTTP/HTTPS URL to scrape and ingest into the knowledge base."
         ),
-        example="https://en.wikipedia.org/wiki/Artificial_intelligence",
+        examples=["https://en.wikipedia.org/wiki/Artificial_intelligence"],
         json_schema_extra={"example": "https://en.wikipedia.org/wiki/Artificial_intelligence"}
     )
     pipeline_id: str | None = Field(
@@ -115,7 +115,8 @@ async def ingest_file(
             }
         )
 
-    ext = file.filename.split(".")[-1].lower()
+    filename_str = file.filename or "unknown"
+    ext = filename_str.split(".")[-1].lower()
     if ext in ["pdf", "docx", "csv", "pptx"]:
         source_type = ext
     elif ext in ["jpeg", "jpg", "png", "webp"]:
@@ -142,7 +143,7 @@ async def ingest_file(
         raise HTTPException(400, "MIME type mismatch for PDF")
 
     content_hash = hashlib.sha256(file_bytes).hexdigest()
-    filename = sanitize_text(file.filename)
+    filename = sanitize_text(filename_str)
     
     db_pool = get_pool()
     async with db_pool.acquire() as conn:
@@ -151,7 +152,11 @@ async def ingest_file(
         )
         if existing:
             return IngestResponse(
-                document_id=str(existing["id"]), status=existing["status"], duplicate=True
+                document_id=str(existing["id"]), 
+                status=existing["status"], 
+                duplicate=True,
+                warning=None,
+                estimated_wait_minutes=None
             )
 
         doc_id = str(uuid.uuid4())
@@ -182,7 +187,13 @@ async def ingest_file(
             }
         )
 
-    return IngestResponse(document_id=doc_id, status="queued", duplicate=False)
+    return IngestResponse(
+        document_id=doc_id, 
+        status="queued", 
+        duplicate=False,
+        warning=None,
+        estimated_wait_minutes=None
+    )
 
 
 @router.post(
@@ -230,7 +241,11 @@ async def ingest_url(
         )
         if existing:
             return IngestResponse(
-                document_id=str(existing["id"]), status=existing["status"], duplicate=True
+                document_id=str(existing["id"]), 
+                status=existing["status"], 
+                duplicate=True,
+                warning=None,
+                estimated_wait_minutes=None
             )
 
         doc_id = str(uuid.uuid4())
@@ -256,7 +271,13 @@ async def ingest_url(
             }
         )
 
-    return IngestResponse(document_id=doc_id, status="queued", duplicate=False)
+    return IngestResponse(
+        document_id=doc_id, 
+        status="queued", 
+        duplicate=False,
+        warning=None,
+        estimated_wait_minutes=None
+    )
 
 
 @router.get(

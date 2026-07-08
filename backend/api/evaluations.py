@@ -66,12 +66,12 @@ class SimulateEval(BaseModel):
     pipeline_name: str = Field(
         "Test Pipeline", 
         description="The name of the pipeline to associate with the simulated evaluation run.",
-        example="RAG Prod v2"
+        examples=["RAG Prod v2"]
     )
     query: str = Field(
         "What is the capital of France?",
         description="The synthetic or test query used for the simulated run.",
-        example="How do I configure Redis?"
+        examples=["How do I configure Redis?"]
     )
 
 
