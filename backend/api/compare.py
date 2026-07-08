@@ -6,7 +6,7 @@ from uuid import UUID
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.db.pool import get_pool
@@ -16,9 +16,6 @@ from pipelines.generation.generator import StreamingGenerator
 from pipelines.retrieval.pipeline import RetrievalPipeline
 
 router = APIRouter(prefix="/pipelines/compare", tags=["Admin"])
-
-
-from pydantic import BaseModel, Field
 
 class CompareRequest(BaseModel):
     query: str = Field(
@@ -132,8 +129,15 @@ async def run_pipeline(
 @router.post(
     "",
     summary="A/B Test Pipelines",
-    description="Executes a single RAG query against two different pipelines concurrently. Returns a side-by-side comparison of the generated answers, retrieval latency, total latency, chunks used, and automated evaluation scores. This is highly useful for comparing a baseline model against a challenger model. Requires 'admin' scope.",
-    response_description="A JSON object containing the query and the results for pipeline_a and pipeline_b."
+    description=(
+        "Executes a single RAG query against two different pipelines concurrently. "
+        "Returns a side-by-side comparison of the generated answers, retrieval latency, "
+        "total latency, chunks used, and automated evaluation scores. This is highly "
+        "useful for comparing a baseline model against a challenger model. Requires 'admin' scope."
+    ),
+    response_description=(
+        "A JSON object containing the query and the results for pipeline_a and pipeline_b."
+    )
 )
 async def compare_pipelines(req: CompareRequest) -> Any:  # noqa: ANN401
     pool = get_pool()

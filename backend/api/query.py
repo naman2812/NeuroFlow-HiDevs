@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -41,7 +42,11 @@ class QueryRequest(BaseModel):
     )
     stream: bool = Field(
         False,
-        description="If True, returns a Server-Sent Events (SSE) stream of the generated answer tokens. If False, waits for the entire generation to complete and returns a standard JSON response."
+        description=(
+            "If True, returns a Server-Sent Events (SSE) stream of the generated answer tokens. "
+            "If False, waits for the entire generation to complete and "
+            "returns a standard JSON response."
+        )
     )
 
 
@@ -56,8 +61,17 @@ async def get_redis() -> Any:  # noqa: ANN401
     "",
     dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))],
     summary="Execute a RAG query",
-    description="Submits a query to a specific RAG pipeline. The system retrieves relevant chunks and generates an answer using the configured LLM. **Performance notes**: Rate limited to 60 requests per minute. Synchronous queries may take several seconds; for a faster time-to-first-token, use `stream=True`. **Errors**: Returns 400 if prompt injection is detected by the security layer.",
-    response_description="A JSON object containing the answer, citations, and context sources (if stream=False), or a run_id for streaming (if stream=True)."
+    description=(
+        "Submits a query to a specific RAG pipeline. The system retrieves relevant chunks and "
+        "generates an answer using the configured LLM. **Performance notes**: Rate limited "
+        "to 60 requests per minute. Synchronous queries may take several seconds; for a faster "
+        "time-to-first-token, use `stream=True`. **Errors**: Returns 400 if prompt injection "
+        "is detected by the security layer."
+    ),
+    response_description=(
+        "A JSON object containing the answer, citations, and context sources (if stream=False), "
+        "or a run_id for streaming (if stream=True)."
+    )
 )
 async def submit_query(
     req: QueryRequest,
@@ -74,8 +88,6 @@ async def submit_query(
     injection_metadata = {}
     l1_result = scan_for_prompt_injection(req.query)
     if l1_result:
-        import logging
-
         logging.warning(f"Prompt injection pattern detected: {l1_result['pattern']}")
         injection_metadata = l1_result
 
@@ -167,8 +179,15 @@ async def submit_query(
     "/{run_id}/stream",
     dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))],
     summary="Stream query generation tokens (SSE)",
-    description="Connect to this endpoint via Server-Sent Events (SSE) using a `run_id` to stream the LLM generation tokens in real-time. **Performance notes**: The connection emits a keepalive event every 15 seconds to prevent timeouts during long retrieval phases. **Errors**: Returns 404 if the run_id is not found or not in a pending state.",
-    response_description="An SSE stream emitting `message` events containing the generated text tokens."
+    description=(
+        "Connect to this endpoint via Server-Sent Events (SSE) using a `run_id` to stream the "
+        "LLM generation tokens in real-time. **Performance notes**: The connection emits a "
+        "keepalive event every 15 seconds to prevent timeouts during long retrieval phases. "
+        "**Errors**: Returns 404 if the run_id is not found or not in a pending state."
+    ),
+    response_description=(
+        "An SSE stream emitting `message` events containing the generated text tokens."
+    )
 )
 async def stream_query(
     run_id: UUID,

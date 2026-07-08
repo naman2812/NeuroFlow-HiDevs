@@ -1,11 +1,14 @@
 import asyncio
 import json
+import uuid
+from datetime import datetime
 from typing import Any
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Request
 from opentelemetry import trace
 from opentelemetry.propagate import extract
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from backend.config import settings
@@ -19,8 +22,15 @@ router = APIRouter(prefix="/evaluations", tags=["Evaluation"])
 @router.get(
     "/stream",
     summary="Stream real-time evaluation metrics",
-    description="Subscribe to real-time RAG evaluation results (faithfulness, answer relevance, context precision, context recall, overall score) via Server-Sent Events (SSE). Use this to power live observability dashboards. **Performance notes**: Uses Redis Pub/Sub under the hood. Keepalive pings are sent automatically.",
-    response_description="An SSE stream emitting `message` events containing the evaluation JSON dictionary."
+    description=(
+        "Subscribe to real-time RAG evaluation results (faithfulness, answer relevance, "
+        "context precision, context recall, overall score) via Server-Sent Events (SSE). "
+        "Use this to power live observability dashboards. **Performance notes**: Uses "
+        "Redis Pub/Sub under the hood. Keepalive pings are sent automatically."
+    ),
+    response_description=(
+        "An SSE stream emitting `message` events containing the evaluation JSON dictionary."
+    )
 )
 async def stream_evaluations(request: Request) -> Any:  # noqa: ANN401
 
@@ -51,10 +61,6 @@ async def stream_evaluations(request: Request) -> Any:  # noqa: ANN401
     return EventSourceResponse(event_generator())
 
 
-import uuid  # noqa: E402
-from datetime import datetime  # noqa: E402
-
-from pydantic import BaseModel, Field  # noqa: E402
 
 class SimulateEval(BaseModel):
     pipeline_name: str = Field(
@@ -72,8 +78,14 @@ class SimulateEval(BaseModel):
 @router.post(
     "/simulate",
     summary="Simulate an evaluation run",
-    description="Generates synthetic evaluation metrics (faithfulness, context precision, etc.) and publishes them to the Redis Pub/Sub stream for testing dashboard interactivity without invoking a real LLM judge.",
-    response_description="A JSON object containing the status and the simulated evaluation dictionary."
+    description=(
+        "Generates synthetic evaluation metrics (faithfulness, context precision, etc.) "
+        "and publishes them to the Redis Pub/Sub stream for testing dashboard "
+        "interactivity without invoking a real LLM judge."
+    ),
+    response_description=(
+        "A JSON object containing the status and the simulated evaluation dictionary."
+    )
 )
 async def simulate_eval(req: SimulateEval) -> Any:  # noqa: ANN401
     # Simulate a run ID and random metrics
@@ -134,7 +146,10 @@ async def simulate_eval(req: SimulateEval) -> Any:  # noqa: ANN401
 @router.get(
     "",
     summary="List all evaluation runs",
-    description="Fetches a paginated list of historical evaluation records from the database, sorted chronologically descending. Useful for historical reporting and trend analysis.",
+    description=(
+        "Fetches a paginated list of historical evaluation records from the database, "
+        "sorted chronologically descending. Useful for historical reporting and trend analysis."
+    ),
     response_description="A JSON array of evaluation records."
 )
 async def list_evaluations(limit: int = 50, offset: int = 0) -> Any:  # noqa: ANN401
@@ -151,7 +166,10 @@ async def list_evaluations(limit: int = 50, offset: int = 0) -> Any:  # noqa: AN
 @router.get(
     "/{run_id}",
     summary="Get evaluation by Run ID",
-    description="Fetches the explicit evaluation metrics for a specific pipeline `run_id`. **Errors**: Returns 404 if the evaluation does not exist or has not completed yet.",
+    description=(
+        "Fetches the explicit evaluation metrics for a specific pipeline `run_id`. "
+        "**Errors**: Returns 404 if the evaluation does not exist or has not completed yet."
+    ),
     response_description="A JSON object containing the evaluation metrics for the run."
 )
 async def get_evaluation(run_id: uuid.UUID) -> Any:  # noqa: ANN401

@@ -1,11 +1,11 @@
-import asyncio
 import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from backend.db.pool import get_pool
 
 logger = structlog.get_logger(__name__)
 
-async def run_data_retention_policy():
+async def run_data_retention_policy() -> None:
     """
     Executes the data retention policy to delete old pipeline runs, evaluations, and chunks.
     """
@@ -18,7 +18,8 @@ async def run_data_retention_policy():
     
     try:
         async with pool.acquire() as conn:
-            # 1. Delete pipeline_runs older than 90 days where status='complete' and no evaluations row, unless flagged
+            # 1. Delete pipeline_runs older than 90 days where status='complete' 
+            # and no evaluations row, unless flagged
             q1 = """
                 DELETE FROM pipeline_runs
                 WHERE created_at < NOW() - INTERVAL '90 days'
@@ -58,12 +59,12 @@ async def run_data_retention_policy():
 
 scheduler = AsyncIOScheduler()
 
-def start_retention_scheduler():
+def start_retention_scheduler() -> None:
     # Run daily at 3:00 AM
     scheduler.add_job(run_data_retention_policy, 'cron', hour=3, minute=0)
     scheduler.start()
     logger.info("Data retention APScheduler started. Configured to run daily at 03:00.")
 
-def stop_retention_scheduler():
+def stop_retention_scheduler() -> None:
     scheduler.shutdown(wait=False)
     logger.info("Data retention APScheduler stopped.")

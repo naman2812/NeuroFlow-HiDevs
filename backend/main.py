@@ -104,7 +104,10 @@ FastAPIInstrumentor.instrument_app(app)
 @app.get(
     "/health",
     summary="System Health Check",
-    description="Returns the current operational status of the API, PostgreSQL database, and Redis cache. Useful for Kubernetes liveness/readiness probes.",
+    description=(
+        "Returns the current operational status of the API, PostgreSQL database, and Redis cache. "
+        "Useful for Kubernetes liveness/readiness probes."
+    ),
     response_description="A JSON object detailing the health status of all subsystems.",
     tags=["Admin"]
 )
@@ -176,7 +179,10 @@ async def health_check() -> Any:  # noqa: ANN401
 @app.get(
     "/metrics",
     summary="Prometheus Metrics",
-    description="Exposes internal Prometheus metrics including request counts, error rates, and API latencies. Intended to be scraped by a Prometheus server.",
+    description=(
+        "Exposes internal Prometheus metrics including request counts, error rates, "
+        "and API latencies. Intended to be scraped by a Prometheus server."
+    ),
     response_description="Plain text Prometheus metrics exposition format.",
     tags=["Admin"]
 )
