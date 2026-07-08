@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import uuid
 from datetime import datetime
 from typing import Any
@@ -13,6 +14,10 @@ from sse_starlette.sse import EventSourceResponse
 
 from backend.config import settings
 from backend.monitoring.metrics import eval_faithfulness, eval_overall
+
+logger = logging.getLogger(__name__)
+
+
 
 tracer = trace.get_tracer(__name__)
 
@@ -337,14 +342,14 @@ async def process_evaluation_queue() -> Any:  # noqa: ANN401
                                     )
 
                     except Exception as db_err:
-                        print(f"Error checking anomalies: {db_err}")
+                        logger.info(f"Error checking anomalies: {db_err}")
 
         except asyncio.CancelledError:
             break
         except Exception as e:
             if "Timeout reading" in str(e) or "TimeoutError" in type(e).__name__:
                 continue
-            print(f"Error processing evaluation queue: {e}")
+            logger.info(f"Error processing evaluation queue: {e}")
             await asyncio.sleep(1)
 
     await r.aclose()

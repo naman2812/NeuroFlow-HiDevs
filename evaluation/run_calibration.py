@@ -1,10 +1,15 @@
 import asyncio
 import json
+import logging
 from typing import Any, cast
 
 import numpy as np
 
 from backend.providers.client import NeuroFlowClient
+
+logger = logging.getLogger(__name__)
+
+
 
 
 class MockRedis:
@@ -48,7 +53,7 @@ async def main() -> None:
     else:
         correlation = 1.0
 
-    print(f"Pearson Correlation: {correlation}")
+    logger.info(f"Pearson Correlation: {correlation}")
 
     results = {
         "dataset_size": len(dataset),
@@ -61,9 +66,9 @@ async def main() -> None:
         json.dump(results, f, indent=2)
 
     if correlation > 0.85:
-        print("Calibration successful.")
+        logger.info("Calibration successful.")
     else:
-        print("Calibration failed. Correlation must be > 0.85.")
+        logger.info("Calibration failed. Correlation must be > 0.85.")
 
 
 if __name__ == "__main__":
