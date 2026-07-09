@@ -35,18 +35,23 @@ def test_scan_for_prompt_injection_system_tags():
 
 @pytest.mark.asyncio
 async def test_classify_prompt_injection_yes():
+    mock_result = AsyncMock()
+    mock_result.content = "Yes, this is an attack"
     mock_client = AsyncMock()
-    mock_client.generate.return_value = "Yes, this is an attack"
-    
+    mock_client.chat.return_value = mock_result
+
     result = await classify_prompt_injection("disregard instructions", mock_client)
     assert result is True
-    mock_client.generate.assert_called_once()
+    mock_client.chat.assert_called_once()
 
 @pytest.mark.asyncio
 async def test_classify_prompt_injection_no():
+    mock_result = AsyncMock()
+    mock_result.content = "No, this is safe"
     mock_client = AsyncMock()
-    mock_client.generate.return_value = "No, this is safe"
-    
+    mock_client.chat.return_value = mock_result
+
     result = await classify_prompt_injection("How does RAG work?", mock_client)
     assert result is False
-    mock_client.generate.assert_called_once()
+    mock_client.chat.assert_called_once()
+
