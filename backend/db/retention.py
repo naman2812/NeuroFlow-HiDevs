@@ -1,9 +1,9 @@
-import structlog
+import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from backend.db.pool import get_pool
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 async def run_data_retention_policy() -> None:
     """
@@ -48,14 +48,11 @@ async def run_data_retention_policy() -> None:
             chunks_deleted = int(result3.split(" ")[-1]) if result3 else 0
 
             logger.info(
-                "Data retention cleanup completed successfully.",
-                pipeline_runs_deleted=runs_deleted,
-                evaluations_deleted=evals_deleted,
-                archived_chunks_deleted=chunks_deleted
+                f"Data retention cleanup completed successfully. pipeline_runs_deleted={runs_deleted} evaluations_deleted={evals_deleted} archived_chunks_deleted={chunks_deleted}"
             )
             
     except Exception as e:
-        logger.error("Failed to execute data retention job.", error=str(e))
+        logger.error(f"Failed to execute data retention job. error={str(e)}")
 
 scheduler = AsyncIOScheduler()
 
