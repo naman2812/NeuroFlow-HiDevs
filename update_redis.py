@@ -1,5 +1,9 @@
 import os
 import glob
+import logging
+logger = logging.getLogger(__name__)
+
+
 
 target = 'f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}"'
 target2 = 'f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}",\n            decode_responses=True,'
@@ -18,5 +22,5 @@ for filepath in glob.glob('backend/**/*.py', recursive=True):
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(new_content)
             count += 1
-            print(f'Updated {filepath}')
-print(f'Total files updated: {count}')
+            logger.info(f'Updated {filepath}')
+logger.info(f'Total files updated: {count}')
