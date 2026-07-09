@@ -127,4 +127,4 @@ async def poll_finetune_jobs(ctx: Any) -> Any:  # noqa: ANN401
                     )
 
             except Exception as e:
-                logger.info(f"Error polling finetune job {job_id}: {e}")
+                logger.error(f"Error polling finetune job {job_id}: {e}")

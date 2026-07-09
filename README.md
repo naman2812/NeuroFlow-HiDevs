@@ -118,7 +118,7 @@ import asyncio
 from neuroflow.client import NeuroFlowClient
 
 async def main():
-    client = NeuroFlowClient(api_key="your_api_key", base_url="http://localhost:8000")
+    client = NeuroFlowClient("http://localhost:8000", api_key="your_api_key")
     
     # 1. Ingest a document
     doc = await client.ingest_file("knowledge_base.pdf")
@@ -126,9 +126,11 @@ async def main():
     
     # 2. Query and stream response
     print("Response: ", end="")
-    async for chunk in client.query_stream("What are the key features?"):
-        print(chunk, end="", flush=True)
+    async for token in client.query("What are the key features?", pipeline_id="your_pipeline_id", stream=True):
+        print(token, end="", flush=True)
     print()
+
+    await client.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

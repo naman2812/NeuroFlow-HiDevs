@@ -342,14 +342,14 @@ async def process_evaluation_queue() -> Any:  # noqa: ANN401
                                     )
 
                     except Exception as db_err:
-                        logger.info(f"Error checking anomalies: {db_err}")
+                        logger.error(f"Error checking anomalies: {db_err}")
 
         except asyncio.CancelledError:
             break
         except Exception as e:
             if "Timeout reading" in str(e) or "TimeoutError" in type(e).__name__:
                 continue
-            logger.info(f"Error processing evaluation queue: {e}")
+            logger.error(f"Error processing evaluation queue: {e}")
             await asyncio.sleep(1)
 
     await r.aclose()

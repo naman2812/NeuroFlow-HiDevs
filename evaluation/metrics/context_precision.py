@@ -44,7 +44,7 @@ async def evaluate_context_precision(
             else:
                 useful_flags.append(0.0)
         except Exception as e:
-            logger.info(f"Error checking chunk usefulness: {e}")
+            logger.error(f"Error checking chunk usefulness: {e}")
             useful_flags.append(0.0)
 
     # Compute rank-weighted proportion:

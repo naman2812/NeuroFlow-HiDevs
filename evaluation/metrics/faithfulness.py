@@ -45,7 +45,7 @@ async def evaluate_faithfulness(
         if not isinstance(claims, list):
             claims = []
     except Exception as e:
-        logger.info(f"Error extracting claims: {e}")
+        logger.error(f"Error extracting claims: {e}")
         return 0.0
 
     if not claims:

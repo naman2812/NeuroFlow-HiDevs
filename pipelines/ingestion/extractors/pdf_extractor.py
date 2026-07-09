@@ -42,7 +42,7 @@ def extract_pdf(file_path: str) -> list[ExtractedPage]:
                             )
                         )
     except Exception as e:
-        logger.info(f"Error extracting tables from PDF: {e}")
+        logger.error(f"Error extracting tables from PDF: {e}")
 
     # 2. Extract text with pypdfium2
     try:
@@ -92,7 +92,7 @@ def extract_pdf(file_path: str) -> list[ExtractedPage]:
                     )
                 )
     except Exception as e:
-        logger.info(f"Error reading PDF with pypdfium2: {e}")
+        logger.error(f"Error reading PDF with pypdfium2: {e}")
 
     # Sort pages by page_number, then text over table
     pages.sort(key=lambda p: (p.page_number, p.content_type == "table"))

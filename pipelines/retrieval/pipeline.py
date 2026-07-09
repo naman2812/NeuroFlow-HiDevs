@@ -168,7 +168,7 @@ class RetrievalPipeline:
             }
 
             cache_payload = result_data.copy()
-            cache_payload["raw_results"] = [r.dict() for r in final_results]
+            cache_payload["raw_results"] = [r.model_dump() for r in final_results]
             await self.redis.setex(cache_key, 1800, json.dumps(cache_payload))
 
             return result_data

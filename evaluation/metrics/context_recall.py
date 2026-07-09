@@ -54,6 +54,6 @@ async def evaluate_context_recall(
             if "yes" in verdict:
                 attributable_sentences += 1.0
         except Exception as e:
-            logger.info(f"Error checking sentence attribution: {e}")
+            logger.error(f"Error checking sentence attribution: {e}")
 
     return attributable_sentences / len(sentences)

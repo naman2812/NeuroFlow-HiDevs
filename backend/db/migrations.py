@@ -20,7 +20,7 @@ async def run_migrations() -> Any:  # noqa: ANN401
         with open(schema_path) as f:  # noqa: ASYNC230
             schema_sql = f.read()
     except Exception as e:
-        logger.info(f"Error reading schema file: {e}")
+        logger.error(f"Error reading schema file: {e}")
         return
 
     # In a real app we'd use Alembic or similar, but for now we'll just check if the documents table exists  # noqa: E501
@@ -60,4 +60,4 @@ async def run_migrations() -> Any:  # noqa: ANN401
             );
             """)
         except Exception as e:
-            logger.info(f"Migration error: {e}")
+            logger.error(f"Migration error: {e}")
