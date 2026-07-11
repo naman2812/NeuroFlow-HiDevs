@@ -71,80 +71,26 @@ class StreamingGenerator:
 
             criteria = RoutingCriteria(task_type=task_type, max_cost_per_call=max_cost)
 
-            # Override client stream_chat temperature if supported? The provider interface usually relies on kwargs.  # noqa: E501
-            # We can pass temperature as kwargs to stream_chat in NeuroFlowClient.
-            # Actually our NeuroFlowClient.stream_chat(messages, criteria, **kwargs) handles extra kwargs.  # noqa: E501
-            stream_gen = await self.client.stream_chat(messages, criteria, temperature=temperature)
+            # Use non-streaming chat for reliability; the endpoint handles final assembly.
+            result = await self.client.chat(messages, criteria, temperature=temperature)
+            final_text = result.content
 
-            full_response = []
-            is_thinking = False
-            buffer = ""
-            think_content = ""
-            clean_response = []
+            # Strip <think>...</think> blocks (used by reasoning models)
+            import re
+            think_content_match = re.search(r"<think>(.*?)</think>", final_text, re.DOTALL)
+            think_content = think_content_match.group(1) if think_content_match else ""
+            clean_text = re.sub(r"<think>.*?</think>", "", final_text, flags=re.DOTALL).strip()
 
-            with tracer.start_as_current_span("generation.llm_call") as llm_span:
-                llm_span.set_attribute("pipeline_id", pipeline_id)
-                llm_span.set_attribute("run_id", str(run_id))
-                llm_span.set_attribute(
-                    "model", task_type
-                )  # The router decides, so task_type is our placeholder
-                # Stream from LLM
-                async for chunk in stream_gen:
-                    full_response.append(chunk)
-                    buffer += chunk
+            # Yield the full text in one chunk
+            yield (clean_text, [])
 
-                    while True:
-                        if not is_thinking:
-                            if "<think>" in buffer:
-                                pre, post = buffer.split("<think>", 1)
-                                if pre:
-                                    clean_response.append(pre)
-                                    yield (pre, [])
-                                is_thinking = True
-                                buffer = post
-                            else:
-                                last_lt = buffer.rfind("<")
-                                if last_lt != -1 and "<think>".startswith(buffer[last_lt:]):
-                                    pre = buffer[:last_lt]
-                                    buffer = buffer[last_lt:]
-                                    if pre:
-                                        clean_response.append(pre)
-                                        yield (pre, [])
-                                    break
-                                else:
-                                    pre = buffer
-                                    buffer = ""
-                                    if pre:
-                                        clean_response.append(pre)
-                                        yield (pre, [])
-                                    break
-                        else:
-                            if "</think>" in buffer:
-                                pre, post = buffer.split("</think>", 1)
-                                think_content += pre
-                                is_thinking = False
-                                buffer = post
-                            else:
-                                last_lt = buffer.rfind("<")
-                                if last_lt != -1 and "</think>".startswith(buffer[last_lt:]):
-                                    pre = buffer[:last_lt]
-                                    buffer = buffer[last_lt:]
-                                    think_content += pre
-                                    break
-                                else:
-                                    think_content += buffer
-                                    buffer = ""
-                                    break
-
-                # Assume NeuroFlowClient tracks provider/model somewhere or we use generic. We'll use criteria task_type  # noqa: E501
-                lm_calls_total.labels(provider="routed", model="routed", task_type=task_type).inc()
+            lm_calls_total.labels(provider="routed", model="routed", task_type=task_type).inc()
 
             duration = time.time() - start_time
             generation_latency.labels(model="routed").observe(duration)
 
             latency_ms = int(duration * 1000)
-            final_text = "".join(full_response)
-            clean_text = "".join(clean_response)
+            # final_text and clean_text already set above from client.chat() result
 
             input_tokens = len(self.tokenizer.encode(prompt))
             output_tokens = len(self.tokenizer.encode(final_text))

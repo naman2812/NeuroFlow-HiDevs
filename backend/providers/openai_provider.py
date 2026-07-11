@@ -19,7 +19,10 @@ class OpenAIProvider(BaseLLMProvider):
     def __init__(self, model_name: str) -> None:
         super().__init__(model_name)
         api_key = settings.openai_api_key or "mock"
-        self.client = AsyncOpenAI(api_key=api_key)
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=settings.openai_base_url or None,
+        )
 
         pricing = OPENAI_PRICING.get(model_name, OPENAI_PRICING["gpt-4o-mini"])
         self._cost_input = pricing["input"] / 1_000_000
@@ -117,7 +120,8 @@ class OpenAIProvider(BaseLLMProvider):
             return [[0.1] * 1536 for _ in texts]
 
         # text-embedding-3-small by default with batch size of 100
-        model = "text-embedding-3-small"
+        # OpenRouter needs the "openai/" prefix; real OpenAI does not
+        model = "openai/text-embedding-3-small" if settings.openai_base_url else "text-embedding-3-small"
         batch_size = 100
 
         all_embeddings = []
