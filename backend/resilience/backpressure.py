@@ -21,8 +21,15 @@ def get_redis_client() -> Any:  # noqa: ANN401
 async def check_ingest_backpressure() -> Any:  # noqa: ANN401
     client = get_redis_client()
 
-    # Track queue depth: LLEN queue:ingest in Redis
-    queue_depth = await client.llen("queue:ingest")
+    # Track queue depth: LLEN (if list) or ZCARD (if zset)
+    try:
+        queue_depth = await client.llen("queue:ingest")
+    except Exception as e:
+        if "WRONGTYPE" in str(e):
+            queue_depth = await client.zcard("queue:ingest")
+        else:
+            queue_depth = 0
+            
     queue_depth_metric.set(queue_depth)
 
     if queue_depth > 100:

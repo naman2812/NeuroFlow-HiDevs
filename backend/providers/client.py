@@ -91,6 +91,8 @@ class NeuroFlowClient:
 
                     return result  # type: ignore
             except Exception as e:
+                import logging
+                logging.getLogger("neuroflow").error(f"Provider {provider_name} failed: {e}")
                 # Catch non-retryable errors (or exhausted rate limit retries) and fallback
                 last_exception = e
                 continue
