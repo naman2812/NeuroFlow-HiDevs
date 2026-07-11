@@ -68,10 +68,13 @@ class OpenAIProvider(BaseLLMProvider):
         start_time = time.time()
 
         async def _call() -> Any:  # noqa: ANN401
+            # Merge kwargs, giving precedence to passed in kwargs but defaulting max_tokens to 800
+            call_kwargs = {"max_tokens": 800}
+            call_kwargs.update(kwargs)
             return await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=self._format_messages(messages),  # type: ignore
-                **kwargs,
+                **call_kwargs,
             )
 
         response = await self._execute_with_retry(_call)
@@ -102,11 +105,13 @@ class OpenAIProvider(BaseLLMProvider):
 
     async def stream(self, messages: list[ChatMessage], **kwargs: Any) -> AsyncGenerator[str, None]:  # type: ignore  # noqa: ANN401
         async def _call() -> Any:  # noqa: ANN401
+            call_kwargs = {"max_tokens": 800}
+            call_kwargs.update(kwargs)
             return await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=self._format_messages(messages),  # type: ignore
                 stream=True,
-                **kwargs,
+                **call_kwargs,
             )
 
         stream_response = await self._execute_with_retry(_call)
