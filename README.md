@@ -102,7 +102,16 @@ cp .env.example .env
 # (Optional) Add OPENAI_BASE_URL=https://openrouter.ai/api/v1 if using OpenRouter
 docker compose up --build -d
 ```
-The API will be available at `http://localhost:8000`.
+Wait a few seconds for the services to boot up, and then you can access all the built-in dashboards locally:
+
+### 📊 Accessing the Dashboards
+Once the containers are running, navigate to these URLs in your browser:
+
+- **Swagger UI (Main API):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Grafana (Real-time Metrics & Evals):** [http://localhost:3000](http://localhost:3000)
+- **Jaeger (Distributed Tracing):** [http://localhost:16686](http://localhost:16686)
+- **MLflow (Experiment Tracking):** [http://localhost:5000](http://localhost:5000)
+- **Prometheus (Raw Metric Queries):** [http://localhost:9090](http://localhost:9090)
 
 ## API Reference
 | Method | Path | Auth Requirement | Description |
