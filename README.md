@@ -1,5 +1,7 @@
 # NeuroFlow
 
+**Live URL (Production Demo):** [Insert your Live Deployment URL here if deployed, otherwise `http://localhost:8000/docs`]
+
 ## What is NeuroFlow
 NeuroFlow is a production-ready, multi-modal Retrieval-Augmented Generation (RAG) system designed for high-accuracy enterprise knowledge retrieval. It seamlessly unifies document ingestion, hybrid vector-sparse search, and dynamic routing to heterogeneous LLMs based on query complexity. The system continuously self-improves via an asynchronous LLM-as-a-judge automated evaluation pipeline and an integrated MLflow fine-tuning feedback loop.
 
