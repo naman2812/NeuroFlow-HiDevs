@@ -94,7 +94,7 @@ async def submit_query(
     # Layer 2 Prompt Injection (LLM Classification)
     is_injection = await classify_prompt_injection(req.query, client)
     if is_injection:
-        await redis_client.aclose()
+        await redis_client.aclose() if hasattr(redis_client, "aclose") else redis_client.close()
         return JSONResponse(
             status_code=400,
             content={"error": "query_rejected", "reason": "potential_prompt_injection"},
@@ -160,7 +160,7 @@ async def submit_query(
         if batch_citations:
             citations = batch_citations
 
-    await redis_client.aclose()
+    await redis_client.aclose() if hasattr(redis_client, "aclose") else redis_client.close()
 
     queries_total.labels(pipeline_id=str(req.pipeline_id), status="success").inc()
 
@@ -313,6 +313,6 @@ async def stream_query(
                     yield {"event": "message", "data": json.dumps({"type": "keepalive"})}
 
         finally:
-            await redis_client.aclose()
+            await redis_client.aclose() if hasattr(redis_client, "aclose") else redis_client.close()
 
     return EventSourceResponse(event_generator())

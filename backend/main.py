@@ -137,10 +137,23 @@ async def health_check() -> Any:  # noqa: ANN401
                 cb["failure_count"] = int(fails) if fails else 0
             cb_status[provider] = cb
 
-        queue_depth = await r.llen("queue:ingest")
+        try:
+            queue_depth = await r.llen("queue:ingest")
+        except Exception:
+            try:
+                queue_depth = await r.zcard("queue:ingest")
+            except Exception:
+                queue_depth = 0
+                
         # Optional: check arq queue depth as well if queue:ingest is empty
         if queue_depth == 0:
-            queue_depth = await r.llen("arq:queue")
+            try:
+                queue_depth = await r.llen("arq:queue")
+            except Exception:
+                try:
+                    queue_depth = await r.zcard("arq:queue")
+                except Exception:
+                    queue_depth = 0
 
         workers = await r.scard("arq:workers")
         worker_count = workers if workers else 2  # default if none

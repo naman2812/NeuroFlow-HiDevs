@@ -97,6 +97,7 @@ git clone https://github.com/naman2812/NeuroFlow-HiDevs.git
 cd NeuroFlow-HiDevs
 cp .env.example .env
 # Edit .env to add your OPENAI_API_KEY
+# (Optional) Add OPENAI_BASE_URL=https://openrouter.ai/api/v1 if using OpenRouter
 docker compose up --build -d
 ```
 The API will be available at `http://localhost:8000`.

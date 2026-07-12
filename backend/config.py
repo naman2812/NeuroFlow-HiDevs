@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     )
 
     openai_api_key: str | None = Field(default=None, description="OpenAI API Key")
+    openai_base_url: str | None = Field(default=None, description="Optional custom base URL for OpenAI client (e.g. OpenRouter)")
     anthropic_api_key: str | None = Field(default=None, description="Anthropic API Key")
 
     env_prefix: str = Field(

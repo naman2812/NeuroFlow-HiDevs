@@ -32,12 +32,16 @@ class ModelRouter:
         self.redis = redis_client
         self.cache_key = "router:models"
 
-        # Default fallback models if Redis is empty
+        # Default fallback models if Redis is empty.
+        # Only include providers whose API keys are configured.
+        # Anthropic models are listed here for reference but disabled by default;
+        # enable them by setting ANTHROPIC_API_KEY and adding them to Redis via
+        # the /admin/models endpoint.
         self.default_models = [
-            ModelConfig("gpt-4o", "openai", True, 128000, 2.50, 10.00, True),
             ModelConfig("gpt-4o-mini", "openai", True, 128000, 0.15, 0.60, False),
-            ModelConfig("claude-3-5-sonnet-20240620", "anthropic", True, 200000, 3.00, 15.00, True),
-            ModelConfig("claude-3-haiku-20240307", "anthropic", True, 200000, 0.25, 1.25, False),
+            ModelConfig("gpt-4o", "openai", True, 128000, 2.50, 10.00, True),
+            # ModelConfig("claude-3-haiku-20240307", "anthropic", True, 200000, 0.25, 1.25, False),
+            # ModelConfig("claude-3-5-sonnet-20240620", "anthropic", True, 200000, 3.00, 15.00, True),
         ]
 
     async def _get_registered_models(self) -> list[ModelConfig]:
