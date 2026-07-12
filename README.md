@@ -104,7 +104,7 @@ docker compose up --build -d
 ```
 Wait a few seconds for the services to boot up, and then you can access all the built-in dashboards locally:
 
-### 📊 Accessing the Dashboards
+### Accessing the Dashboards
 Once the containers are running, navigate to these URLs in your browser:
 
 - **Swagger UI (Main API):** [http://localhost:8000/docs](http://localhost:8000/docs)
