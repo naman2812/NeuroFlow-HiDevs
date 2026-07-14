@@ -11,7 +11,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AnyHttpUrl
 
 from backend.config import settings
 from backend.db.pool import get_pool
@@ -45,7 +45,7 @@ def is_safe_url(url: str) -> bool:
 
 
 class URLIngestRequest(BaseModel):
-    url: str = Field(
+    url: AnyHttpUrl = Field(
         ...,
         description=(
             "The fully qualified HTTP/HTTPS URL to scrape and ingest into the knowledge base."
@@ -83,7 +83,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post(
     "/ingest/file",
-    dependencies=[Depends(rate_limit_endpoint(max_requests=10, window_seconds=3600))],
+    dependencies=[Depends(rate_limit_endpoint(max_requests=settings.rate_limit_ingest, window_seconds=3600))],
     summary="Upload and ingest a document file",
     description=(
         "Uploads a file (PDF, Docx, Text, Image) to be ingested into the knowledge base. "
@@ -198,7 +198,7 @@ async def ingest_file(
 
 @router.post(
     "/ingest/url",
-    dependencies=[Depends(rate_limit_endpoint(max_requests=10, window_seconds=3600))],
+    dependencies=[Depends(rate_limit_endpoint(max_requests=settings.rate_limit_ingest, window_seconds=3600))],
     summary="Ingest a document via URL",
     description=(
         "Provides a URL to be ingested into the knowledge base via a JSON payload. "

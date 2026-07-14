@@ -1,24 +1,35 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from backend.resilience.rate_limiter import auth_rate_limit
 from backend.security.auth import create_access_token
 
-router = APIRouter(prefix="/auth", tags=["Admin"])
+router = APIRouter(tags=["Authentication"])
 
 
 class TokenRequest(BaseModel):
     client_id: str = Field(
-        ..., description="The client ID for authentication.", examples=["client_123"]
+        ..., 
+        description="The client ID for authentication.", 
+        examples=["client_123"],
+        min_length=3,
+        max_length=100,
+        pattern=r'^[a-zA-Z0-9_-]+$'
     )
     client_secret: str = Field(
-        ..., description="The client secret for authentication.", examples=["supersecret"]
+        ..., 
+        description="The secret key.", 
+        examples=["secret_456"],
+        min_length=8,
+        max_length=256
     )
 
 
 @router.post(
-    "/token",
+    "/auth/token",
+    dependencies=[Depends(auth_rate_limit())],
     summary="Generate API Access Token",
     description=(
         "Generates a short-lived JWT Bearer token using client credentials. "

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
@@ -75,7 +75,8 @@ async def lifespan(app: FastAPI) -> Any:  # noqa: ANN401
     await close_pool()
 
 
-from fastapi import Depends  # noqa: E402
+from fastapi import Depends, Request  # noqa: E402
+import structlog  # noqa: E402
 
 from backend.api import auth, compare, evaluations, finetune, ingest, pipelines, query  # noqa: E402
 from backend.api.runs import router as runs_router  # noqa: E402
@@ -84,6 +85,18 @@ from backend.security.middleware import SecurityHeadersMiddleware  # noqa: E402
 
 app = FastAPI(title="NeuroFlow API", lifespan=lifespan)
 app.add_middleware(SecurityHeadersMiddleware)
+
+logger = structlog.get_logger(__name__)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    # Log the full exception and traceback server-side
+    logger.error("unhandled_exception", error=str(exc), path=request.url.path, exc_info=exc)
+    # Return a generic response to the user to prevent information leakage
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"}
+    )
 
 # Auth router doesn't require authentication for /token
 app.include_router(auth.router)

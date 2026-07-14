@@ -148,3 +148,48 @@ def rate_limit_endpoint(max_requests: int, window_seconds: int) -> Any:  # noqa:
             )
 
     return dependency
+
+
+EXPONENTIAL_BACKOFF_SCRIPT = """
+local key = KEYS[1]
+local max_requests = tonumber(ARGV[1])
+
+local current = redis.call('INCR', key)
+if current == 1 then
+    redis.call('EXPIRE', key, 3600)
+    return 0
+end
+
+if current > max_requests then
+    local backoff = math.pow(2, current - max_requests)
+    redis.call('EXPIRE', key, backoff)
+    return backoff
+end
+
+return 0
+"""
+
+def auth_rate_limit() -> Any:  # noqa: ANN401
+    async def dependency(request: Request) -> Any:  # noqa: ANN401
+        client = get_redis_client()
+        ip = request.client.host if request.client else "unknown"
+        endpoint = request.url.path
+        
+        # Per-IP tracking
+        key = f"auth_rate_limit:{endpoint}:{ip}"
+        
+        # If there's an account/email in the body, we ideally track that too, 
+        # but as a middleware dependency we'll rely primarily on IP.
+        
+        backoff = await client.eval(
+            EXPONENTIAL_BACKOFF_SCRIPT, 1, key, settings.rate_limit_auth
+        )
+
+        if backoff > 0:
+            raise HTTPException(
+                status_code=429,
+                detail="Too Many Authentication Attempts. Please try again later.",
+                headers={"Retry-After": str(backoff)},
+            )
+
+    return dependency

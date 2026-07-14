@@ -19,7 +19,9 @@ class FineTuneRequest(BaseModel):
     base_model: str = Field(
         "gpt-3.5-turbo-0613", 
         description="The base LLM to fine-tune (e.g., an OpenAI base model).",
-        examples=["gpt-3.5-turbo-0613"]
+        examples=["gpt-3.5-turbo-0613"],
+        min_length=3,
+        max_length=256
     )
     format: str = Field(
         "sft", 
@@ -27,7 +29,8 @@ class FineTuneRequest(BaseModel):
             "The fine-tuning format: 'sft' (Supervised Fine-Tuning) "
             "or 'dpo' (Direct Preference Optimization)."
         ),
-        examples=["sft"]
+        examples=["sft"],
+        pattern=r'^(sft|dpo)$'
     )
 
 

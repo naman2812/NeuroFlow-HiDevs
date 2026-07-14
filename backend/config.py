@@ -28,6 +28,10 @@ class Settings(BaseSettings):
         description="Prefix for Postgres schemas and Redis keys to isolate preview environments"
     )
 
+    rate_limit_public: int = Field(default=60, description="Max requests per minute for public endpoints")
+    rate_limit_auth: int = Field(default=5, description="Max failed attempts per hour for auth endpoints")
+    rate_limit_ingest: int = Field(default=20, description="Max requests per hour for document ingestion")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property

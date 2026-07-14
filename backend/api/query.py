@@ -30,10 +30,10 @@ router = APIRouter(prefix="/query", tags=["Query"])
 class QueryRequest(BaseModel):
     query: str = Field(
         ..., 
-        max_length=5000,
-        description="The natural language question or query to run against the knowledge base.",
+        description="The user's question or search query.",
         examples=["What is NeuroFlow?"],
-        json_schema_extra={"example": "What are the key benefits of RAG?"}
+        min_length=1,
+        max_length=4000
     )
     pipeline_id: UUID = Field(
         ...,
@@ -59,7 +59,7 @@ async def get_redis() -> Any:  # noqa: ANN401
 
 @router.post(
     "",
-    dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))],
+    dependencies=[Depends(rate_limit_endpoint(max_requests=settings.rate_limit_public, window_seconds=60))],
     summary="Execute a RAG query",
     description=(
         "Submits a query to a specific RAG pipeline. The system retrieves relevant chunks and "
@@ -177,7 +177,7 @@ async def submit_query(
 
 @router.get(
     "/{run_id}/stream",
-    dependencies=[Depends(rate_limit_endpoint(max_requests=60, window_seconds=60))],
+    dependencies=[Depends(rate_limit_endpoint(max_requests=settings.rate_limit_public, window_seconds=60))],
     summary="Stream query generation tokens (SSE)",
     description=(
         "Connect to this endpoint via Server-Sent Events (SSE) using a `run_id` to stream the "

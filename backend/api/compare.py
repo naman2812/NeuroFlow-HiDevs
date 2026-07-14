@@ -21,7 +21,9 @@ class CompareRequest(BaseModel):
     query: str = Field(
         ...,
         description="The test query to run across both pipelines concurrently.",
-        examples=["What is the capital of France?"]
+        examples=["What is the capital of France?"],
+        min_length=1,
+        max_length=4000
     )
     pipeline_a_id: UUID = Field(
         ...,
