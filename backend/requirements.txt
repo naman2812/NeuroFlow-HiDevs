@@ -14,7 +14,7 @@ async-lru==2.3.0
 asyncpg==0.31.0
 attrs==25.4.0
 babel==2.18.0
-beautifulsoup4==4.14.3
+beautifulsoup4==4.15.0
 bidict==0.23.1
 black==26.5.1
 bleach==6.4.0
