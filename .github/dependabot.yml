@@ -25,6 +25,11 @@ updates:
     labels:
       - "dependencies"
       - "python"
+    ignore:
+      - dependency-name: "numpy"
+        versions: ["*"]
+      - dependency-name: "notebook"
+        versions: ["*"]
 
   # Maintain dependencies for Node.js frontend
   - package-ecosystem: "npm"
