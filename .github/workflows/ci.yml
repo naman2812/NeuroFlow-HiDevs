@@ -37,7 +37,7 @@ jobs:
           POSTGRES_HOST: "localhost"
           REDIS_HOST: "localhost"
         run: python -m pytest tests/unit/ -v --cov=backend --cov=pipelines --cov=evaluation --cov-report=xml
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v7
         with: {file: coverage.xml}
 
   security:
