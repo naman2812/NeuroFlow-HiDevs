@@ -21,6 +21,6 @@ jobs:
           " || true
       - name: Notify on failure
         if: failure()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v4
         with:
           payload: '{"text": "⚠️ NeuroFlow quality gate failed!"}'
