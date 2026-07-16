@@ -120,7 +120,7 @@ nbclient==0.10.4
 nbconvert==7.17.1
 nbformat==5.10.4
 nest-asyncio==1.6.0
-notebook==7.5.6
+notebook==7.6.0
 notebook_shim==0.2.4
 numpy==2.4.2
 openai==2.44.0
@@ -315,7 +315,7 @@ nbclient==0.10.4
 nbconvert==7.17.1
 nbformat==5.10.4
 nest-asyncio==1.6.0
-notebook==7.5.6
+notebook==7.6.0
 notebook_shim==0.2.4
 numpy==2.4.2
 openai==2.44.0
