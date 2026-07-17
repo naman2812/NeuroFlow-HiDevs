@@ -30,6 +30,8 @@ updates:
         versions: ["*"]
       - dependency-name: "notebook"
         versions: ["*"]
+      - dependency-name: "scipy"
+        versions: ["*"]
 
   # Maintain dependencies for Node.js frontend
   - package-ecosystem: "npm"
