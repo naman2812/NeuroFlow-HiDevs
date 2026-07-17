@@ -32,6 +32,8 @@ updates:
         versions: ["*"]
       - dependency-name: "scipy"
         versions: ["*"]
+      - dependency-name: "pydantic-core"
+        versions: ["*"]
 
   # Maintain dependencies for Node.js frontend
   - package-ecosystem: "npm"
