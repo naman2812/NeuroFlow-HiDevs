@@ -1,4 +1,4 @@
-﻿altair==6.0.0
+altair==6.0.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anthropic==0.112.0
@@ -154,9 +154,9 @@ pure_eval==0.2.3
 pyarrow==23.0.1
 pycodestyle==2.14.0
 pycparser==3.0
-pydantic==2.12.5
+pydantic==2.13.4
 pydantic-settings==2.14.2
-pydantic_core==2.41.5
+pydantic_core==2.46.4
 pydeck==0.9.1
 pyflakes==3.4.0
 Pygments==2.20.0
