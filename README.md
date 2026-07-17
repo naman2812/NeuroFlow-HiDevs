@@ -142,12 +142,12 @@ ENVIRONMENT=development         # Required: development | staging | production
 
 ### 3. Start all services
 ```bash
-docker compose up --build -d
+docker compose -f infra/docker-compose.yml up --build -d
 ```
 
 ### 4. Verify everything is running
 ```bash
-docker compose ps
+docker compose -f infra/docker-compose.yml ps
 ```
 All services should show `running`. The first startup may take 2-3 minutes as Docker downloads and builds images.
 
@@ -186,7 +186,7 @@ curl -X POST http://localhost:8000/query \
 
 **Step 4** - Stop all services when done:
 ```bash
-docker compose down
+docker compose -f infra/docker-compose.yml down
 ```
 
 ---
@@ -275,10 +275,10 @@ A: Yes! NeuroFlow has a multi-provider client. Set `ANTHROPIC_API_KEY` or `GROQ_
 A: PDF, DOCX, PPTX, PNG, JPG, JPEG, and any publicly accessible URL. Images are processed via Tesseract OCR.
 
 **Q: How do I reset the database and start fresh?**
-A: Run `docker compose down -v` to stop all services and delete all data volumes, then `docker compose up --build -d` again.
+A: Run `docker compose -f infra/docker-compose.yml down -v` to stop all services and delete all data volumes, then `docker compose -f infra/docker-compose.yml up --build -d` again.
 
 **Q: The containers fail to start - what should I check?**
-A: Verify all required variables are set in your `.env` file. Then check container logs with `docker compose logs api`.
+A: Verify all required variables are set in your `.env` file. Then check container logs with `docker compose -f infra/docker-compose.yml logs api`.
 
 **Q: Can I run this without Docker?**
 A: Docker is the recommended and supported approach. Running natively requires manually installing PostgreSQL with the `pgvector` extension, Redis, and all Python/Node dependencies.
