@@ -26,13 +26,59 @@ updates:
       - "dependencies"
       - "python"
     ignore:
+      # numpy: requires Python <3.12 for newer versions
       - dependency-name: "numpy"
         versions: ["*"]
+      # notebook: conflicts with jupyterlab version lock
       - dependency-name: "notebook"
         versions: ["*"]
+      # scipy: Dependabot requests non-existent versions
       - dependency-name: "scipy"
         versions: ["*"]
+      # pydantic + pydantic-core must always be updated together as a pair
+      - dependency-name: "pydantic"
+        versions: ["*"]
       - dependency-name: "pydantic-core"
+        versions: ["*"]
+      # opentelemetry packages are versioned as a suite - must stay in sync
+      - dependency-name: "opentelemetry-api"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-sdk"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-exporter-otlp"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-exporter-otlp-proto-grpc"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-exporter-otlp-proto-http"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-exporter-otlp-proto-common"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-instrumentation"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-instrumentation-fastapi"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-instrumentation-asgi"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-semantic-conventions"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-proto"
+        versions: ["*"]
+      - dependency-name: "opentelemetry-util-http"
+        versions: ["*"]
+      # langchain ecosystem must stay in sync
+      - dependency-name: "langchain"
+        versions: ["*"]
+      - dependency-name: "langchain-core"
+        versions: ["*"]
+      - dependency-name: "langchain-groq"
+        versions: ["*"]
+      - dependency-name: "langgraph"
+        versions: ["*"]
+      - dependency-name: "langgraph-checkpoint"
+        versions: ["*"]
+      - dependency-name: "langgraph-prebuilt"
+        versions: ["*"]
+      - dependency-name: "langgraph-sdk"
         versions: ["*"]
 
   # Maintain dependencies for Node.js frontend
